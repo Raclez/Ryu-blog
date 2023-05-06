@@ -1,0 +1,9 @@
+spring:
+  profiles:
+    active: dev
+log:
+  thread:
+    corePoolSize: 100
+    maxPoolSize: 100
+
+
