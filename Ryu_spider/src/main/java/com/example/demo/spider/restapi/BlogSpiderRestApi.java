@@ -62,7 +62,7 @@ public class BlogSpiderRestApi {
                 .setScheduler(new QueueScheduler())
                 .thread(10)
 
-                .setScheduler(new RedisScheduler(new JedisPool(new GenericObjectPoolConfig(), "ryu.asia", 6379, 50000, "475118582")));
+                .setScheduler(new RedisScheduler(new JedisPool(new GenericObjectPoolConfig(), "101.33.243.16", 6379, 50000, "475118582")));
 //                .setDownloader(new HttpClientDownloader());
 
         try {

@@ -9,16 +9,16 @@ spring:
       username: nacos
       password: nacos
       discovery:
-        server-addr: ryu.asia:8848
+        server-addr: 101.33.243.16:8848
         namespace: dev
       sentinel:
         transport:
           #配置Sentinel dashboard地址
-          dashboard: ryu.asia:8070
+          dashboard: 101.33.243.16:8070
           #默认8719端口,如果被占用会向上扫描。
           port: 8719
       config:
-        server-addr: ryu.asia:8848
+        server-addr: 101.33.243.16:8848
         file-extension: yaml
         #指定分组
         group: dev
