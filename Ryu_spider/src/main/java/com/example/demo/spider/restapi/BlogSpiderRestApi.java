@@ -1,16 +1,12 @@
 package com.example.demo.spider.restapi;
 
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.example.demo.spider.config.HttpClientDownloader;
-import com.example.demo.spider.entity.BlogSpider;
 import com.example.demo.spider.mapper.BlogSpiderMapper;
 import com.example.demo.spider.pipeline.BlogPipeline;
 import com.example.demo.spider.processer.BlogProcesser;
 import com.example.demo.utils.ResultUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +20,6 @@ import us.codecraft.webmagic.scheduler.QueueScheduler;
 import us.codecraft.webmagic.scheduler.RedisScheduler;
 
 import javax.management.JMException;
-import java.util.Date;
-import java.util.List;
 
 /**
  * 博客爬取RestApi
@@ -68,7 +62,7 @@ public class BlogSpiderRestApi {
                 .setScheduler(new QueueScheduler())
                 .thread(10)
 
-                .setScheduler(new RedisScheduler(new JedisPool(new GenericObjectPoolConfig(),"ryuzzzz.icu",6379,50000,"475118582")));
+                .setScheduler(new RedisScheduler(new JedisPool(new GenericObjectPoolConfig(), "ryu.asia", 6379, 50000, "475118582")));
 //                .setDownloader(new HttpClientDownloader());
 
         try {
