@@ -75,6 +75,78 @@ pipeline {
                 }
             }
         }
+        stage('pull镜像到阿里云') {
+            parallel {
+                stage('pull ryu-gateway镜像') {
+                    steps {
+                        sh '''
+           echo "475118582rl" | docker login --username=ryucay registry.cn-hangzhou.aliyuncs.com --password-stdin
+ docker tag ryu-gateway:latest registry.cn-hangzhou.aliyuncs.com/ryu_blog/ryu-gateway:latest
+ docker push registry.cn-hangzhou.aliyuncs.com/ryu_blog/ryu-gateway:latest
+            '''
+                        echo '运行成功'
+                    }
+                }
+//                stage('启动admin镜像') {
+//                    steps {
+//                        sh '''
+//                 echo "475118582rl" | docker login --username=ryucay registry.cn-hangzhou.aliyuncs.com --password-stdin
+//    docker tag ryu-admin:latest registry.cn-hangzhou.aliyuncs.com/ryu_blog/ryu-admin:latest
+//             docker push registry.cn-hangzhou.aliyuncs.com/ryu_blog/ryu-admin:latest
+//            '''
+//                        echo '运行成功'
+//                    }
+//                }
+//                stage('启动picture镜像') {
+//                    steps {
+//                        sh '''
+//            docker run   -d --name ryu-picture -p 8602:8602 ryu-picture:latest
+//                        '''
+//                        echo '运行成功'
+//                    }
+//
+//                }
+//                stage('启动search镜像') {
+//                    steps {
+//                        sh "docker run   -d --name ryu-search -p 8605:8605 ryu-search:latest"
+//
+//                        echo '运行成功'
+//                    }
+//                }
+//                stage('启动spider镜像') {
+//                    steps {
+//                        sh '''
+//            docker run   -d --name ryu-spider -p 8608:8608 ryu-spider:latest
+//            '''
+//                        echo '运行成功'
+//                    }
+//                }
+//                stage('启动web镜像') {
+//                    steps {
+//                        sh '''
+//            docker run   -d --name ryu-web -p 8603:8603 ryu-web:latest
+//            '''
+//                        echo '运行成功'
+//                    }
+//                }
+//                stage('启动sms镜像') {
+//                    steps {
+//                        sh '''
+//            docker run   -d --name ryu-sms -p 8604:8604 ryu-sms:latest
+//            '''
+//                        echo '运行成功'
+//                    }
+//                }
+//                stage('启动monitor镜像') {
+//                    steps {
+//                        sh '''
+//            docker run   -d --name ryu-monitor -p 8606:8606 ryu-monitor:latest
+//            '''
+//                        echo '运行成功'
+//                    }
+//                }
+            }
+        }
         stage('运行镜像') {
             parallel {
                 stage('启动gateway镜像') {

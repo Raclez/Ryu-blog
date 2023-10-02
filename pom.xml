@@ -69,6 +69,7 @@
         <module>Ryu_gateway</module>
         <module>Ryu_spider</module>
         <module>Ryu_commons</module>
+        <module>Ryu_sso</module>
     </modules>
 
     <dependencyManagement>
