@@ -7,7 +7,6 @@ spring:
     nacos:
       username: nacos
       password: nacos
-#########
       discovery:
         server-addr: 101.33.243.16:8848
         namespace: dev
