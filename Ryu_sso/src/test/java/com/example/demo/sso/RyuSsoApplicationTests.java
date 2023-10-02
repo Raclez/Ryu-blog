@@ -1,4 +1,4 @@
-package com.example.ryu_sso;
+package com.example.demo.sso;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
