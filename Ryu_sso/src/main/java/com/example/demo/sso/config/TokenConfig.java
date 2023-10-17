@@ -11,11 +11,11 @@ import javax.annotation.Resource;
  * @author ryu
  */
 public class TokenConfig {
-    @Resource
-    RedisConnectionFactory connectionFactory;
-    @Bean
-    public TokenStore tokenStore(){
-        return new RedisTokenStore(connectionFactory);
-    }
+//    @Resource
+//    RedisConnectionFactory connectionFactory;
+//    @Bean
+//    public TokenStore tokenStore(){
+//        return new RedisTokenStore(connectionFactory);
+//    }
 
 }

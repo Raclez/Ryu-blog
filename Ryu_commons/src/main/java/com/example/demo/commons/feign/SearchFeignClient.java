@@ -2,11 +2,13 @@ package com.example.demo.commons.feign;
 
 import com.example.demo.commons.config.feign.FeignConfiguration;
 import com.example.demo.commons.fallback.SearchFeignFallback;
-import com.example.demo.commons.pojo.ESBlogIndex;
+import com.example.demo.commons.pojo.BlogElasticsearchModel;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 /**
  * 搜索服务feign远程调用
@@ -95,5 +97,8 @@ public interface SearchFeignClient {
     @PostMapping("/search/updateSolrIndexByUid")
     public String updateSolrIndexByUid(@RequestParam(required = true) String uid);
     @PostMapping("/search/addEsBlog")
-    public String addEsblogToEs(@RequestBody(required = true) ESBlogIndex esBlogIndex);
+    public String addEsblogToEs(@RequestBody(required = true) BlogElasticsearchModel blogElasticsearchModel);
+    @PostMapping("/search/addEsBlogs")
+
+    public String addEsblogsToEs(@RequestBody(required = true) List<BlogElasticsearchModel> blogElasticsearchModel);
 }

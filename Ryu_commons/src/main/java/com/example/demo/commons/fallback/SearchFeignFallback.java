@@ -1,10 +1,12 @@
 package com.example.demo.commons.fallback;
 
 import com.example.demo.commons.feign.SearchFeignClient;
-import com.example.demo.commons.pojo.ESBlogIndex;
+import com.example.demo.commons.pojo.BlogElasticsearchModel;
 import com.example.demo.utils.ResultUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * 搜索服务降级兜底方法【当服务不可用时会触发】
@@ -71,7 +73,13 @@ public class SearchFeignFallback implements SearchFeignClient {
     }
 
     @Override
-    public String addEsblogToEs(ESBlogIndex esBlogIndex) {
+    public String addEsblogToEs(BlogElasticsearchModel blogElasticsearchModel) {
+        log.error("搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败");
+        return ResultUtil.errorWithMessage("搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败");
+    }
+
+    @Override
+    public String addEsblogsToEs(List<BlogElasticsearchModel> blogElasticsearchModel) {
         log.error("搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败");
         return ResultUtil.errorWithMessage("搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败");
     }

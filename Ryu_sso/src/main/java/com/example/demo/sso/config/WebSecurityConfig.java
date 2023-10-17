@@ -41,33 +41,17 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable().authorizeRequests()
-                .antMatchers(
-                        "/swagger-ui.html",
-                        "/swagger-ui/*",
-                        "/swagger-resources/**",
-                        "/v2/api-docs",
-                        "/v3/api-docs",
-                        "/webjars/**",
-                        "/actuator/**",
-                        "/druid/**"
-                ).permitAll()
-                // 对于获取token的RestApi要允许匿名访问
-                .antMatchers("/auth/**",
-                        "/creatCode/**",
-                        "/file/**",
-                        "/oauth/**"
-                ).permitAll()
+                .antMatchers("/oauth/**", "/login/**", "/logout/**")
+                .permitAll()
                 // 除上面外的所有请求全部需要鉴权认证
                 .anyRequest().authenticated()
                 .and()
-                .formLogin()
-                .and()
-                .logout();
+                .formLogin().permitAll();
 
     }
 
-//    protected void configure(AuthenticationManagerBuilder a) throws Exception {
-//        a.userDetailsService(userDetailsService);
-//    }
+    protected void configure(AuthenticationManagerBuilder a) throws Exception {
+        a.userDetailsService(userDetailsService);
+    }
 
 }

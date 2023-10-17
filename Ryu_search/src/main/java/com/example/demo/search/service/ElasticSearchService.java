@@ -2,7 +2,7 @@ package com.example.demo.search.service;
 
 import com.example.demo.commons.entity.Blog;
 import com.example.demo.commons.entity.Tag;
-import com.example.demo.commons.pojo.ESBlogIndex;
+import com.example.demo.commons.pojo.BlogElasticsearchModel;
 import com.example.demo.search.global.SysConf;
 import com.example.demo.search.mapper.HighlightResultHelper;
 import com.example.demo.search.repository.BlogRepository;
@@ -10,7 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.annotations.Query;
 import org.springframework.data.elasticsearch.core.DefaultResultMapper;
 import org.springframework.data.elasticsearch.core.ElasticsearchRestTemplate;
 import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
@@ -43,22 +46,17 @@ public class ElasticSearchService {
     @Autowired
     BlogRepository blogRepository;
 
-    public ESBlogIndex buidBlog(Blog eblog) {
+    public BlogElasticsearchModel buidBlog(Blog eblog) {
 
         //构建blog对象
-        ESBlogIndex blog = new ESBlogIndex();
+        BlogElasticsearchModel blog = new BlogElasticsearchModel();
         blog.setId(eblog.getUid());
-        blog.setOid(eblog.getOid());
-        blog.setUid(eblog.getUid());
+
         blog.setTitle(eblog.getTitle());
-        blog.setType(eblog.getType());
+
         blog.setSummary(eblog.getSummary());
         blog.setContent(eblog.getContent());
 
-        if (eblog.getBlogSort() != null) {
-            blog.setBlogSortName(eblog.getBlogSort().getSortName());
-            blog.setBlogSortUid(eblog.getBlogSortUid());
-        }
 
         if (eblog.getTagList() != null) {
             List<Tag> tagList = eblog.getTagList();
@@ -70,18 +68,11 @@ public class ElasticSearchService {
                     tagNameList.add(item.getContent());
                 }
             });
-            blog.setTagNameList(tagNameList);
-            blog.setTagUidList(tagUidList);
+
         }
 
         blog.setIsPublish(eblog.getIsPublish());
-        blog.setAuthor(eblog.getAuthor());
-        blog.setCreateTime(eblog.getCreateTime());
-        if (eblog.getPhotoList() != null && eblog.getPhotoList().size() > 0) {
-            blog.setPhotoUrl(eblog.getPhotoList().get(0));
-        } else {
-            blog.setPhotoUrl("");
-        }
+
         return blog;
     }
 
@@ -115,13 +106,13 @@ public class ElasticSearchService {
         log.error("查询语句：{}", queryBuilder.build().getQuery().toString());
 
         //查询
-        AggregatedPage<ESBlogIndex> result = elasticsearchTemplate.queryForPage(queryBuilder.build(), ESBlogIndex
+        AggregatedPage<BlogElasticsearchModel> result = elasticsearchTemplate.queryForPage(queryBuilder.build(), BlogElasticsearchModel
                 .class,highlightResultHelper);
 
         //解析结果
         long total = result.getTotalElements();
         int totalPage = result.getTotalPages();
-        List<ESBlogIndex> blogList = result.getContent();
+        List<BlogElasticsearchModel> blogList = result.getContent();
         Map<String, Object> map = new HashMap<>();
         map.put(SysConf.TOTAL, total);
         map.put(SysConf.TOTAL_PAGE, totalPage);
@@ -162,12 +153,12 @@ public class ElasticSearchService {
         log.error("查询语句：{}", queryBuilder.build().getQuery().toString());
 
         //查询
-        AggregatedPage<ESBlogIndex> result = elasticsearchTemplate.queryForPage(queryBuilder.build(), ESBlogIndex.class,new DefaultResultMapper());
+        AggregatedPage<BlogElasticsearchModel> result = elasticsearchTemplate.queryForPage(queryBuilder.build(), BlogElasticsearchModel.class,new DefaultResultMapper());
 
         //解析结果
         long total = result.getTotalElements();
         int totalPage = result.getTotalPages();
-        List<ESBlogIndex> blogList = result.getContent();
+        List<BlogElasticsearchModel> blogList = result.getContent();
         Map<String, Object> map = new HashMap<>();
         map.put(SysConf.TOTAL, total);
         map.put(SysConf.TOTAL_PAGE, totalPage);
@@ -176,5 +167,10 @@ public class ElasticSearchService {
         map.put(SysConf.BLOG_LIST, blogList);
         log.info("查询的："+map);
         return map;
+    }
+    public Page<BlogElasticsearchModel> searchByKey(String keywords, int currentPage, int pageSize) {
+        PageRequest page= PageRequest.of(currentPage, pageSize);
+
+        return  blogRepository.findByKey(keywords,page);
     }
 }

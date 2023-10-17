@@ -2,7 +2,7 @@ package com.example.demo.search.restapi;
 
 import com.example.demo.commons.entity.Blog;
 import com.example.demo.commons.feign.WebFeignClient;
-import com.example.demo.commons.pojo.ESBlogIndex;
+import com.example.demo.commons.pojo.BlogElasticsearchModel;
 import com.example.demo.search.global.MessageConf;
 import com.example.demo.search.global.SysConf;
 import com.example.demo.search.repository.BlogRepository;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 @Api(value = "ElasticSearch相关接口", tags = {"ElasticSearch相关接口"})
 @RestController
 public class ElasticSearchRestApi {
-
+@Autowired
    ElasticsearchRestTemplate elasticsearchTemplate;
     @Autowired
     private ElasticSearchService searchService;
@@ -54,7 +54,9 @@ public class ElasticSearchRestApi {
         if (StringUtils.isEmpty(keywords)) {
             return ResultUtil.result(SysConf.ERROR, MessageConf.KEYWORD_IS_NOT_EMPTY);
         }
-        return ResultUtil.result(SysConf.SUCCESS, searchService.search(keywords, currentPage, pageSize));
+//        return ResultUtil.result(SysConf.SUCCESS, searchService.search(keywords, currentPage, pageSize));
+        return ResultUtil.result(SysConf.SUCCESS, searchService.searchByKey(keywords, currentPage, pageSize));
+
     }
 
     @ApiOperation(value = "通过uids删除ElasticSearch博客索引", notes = "通过uids删除ElasticSearch博客索引", response = String.class)
@@ -87,7 +89,7 @@ public class ElasticSearchRestApi {
         if (eblog == null) {
             return ResultUtil.result(SysConf.ERROR, MessageConf.INSERT_FAIL);
         }
-        ESBlogIndex blog = searchService.buidBlog(eblog);
+        BlogElasticsearchModel blog = searchService.buidBlog(eblog);
         blogRepository.save(blog);
         return ResultUtil.result(SysConf.SUCCESS, MessageConf.INSERT_SUCCESS);
     }
@@ -95,37 +97,44 @@ public class ElasticSearchRestApi {
     @ApiOperation(value = "ElasticSearch初始化索引", notes = "ElasticSearch初始化索引", response = String.class)
     @PostMapping("/initElasticSearchIndex")
     public String initElasticSearchIndex() throws ParseException {
-        elasticsearchTemplate.deleteIndex(ESBlogIndex.class);
-        elasticsearchTemplate.createIndex(ESBlogIndex.class);
-        elasticsearchTemplate.putMapping(ESBlogIndex.class);
+//        elasticsearchTemplate.deleteIndex(BlogElasticsearchModel.class);
+        elasticsearchTemplate.createIndex(BlogElasticsearchModel.class);
+        elasticsearchTemplate.putMapping(BlogElasticsearchModel.class);
 
-        Long page = 1L;
-        Long row = 10L;
-        Integer size = 0;
-
-        do {
-            // 查询blog信息
-            String result = webFeignClient.getBlogBySearch(page, row);
-
-            //构建blog
-            List<Blog> blogList = WebUtils.getList(result, Blog.class);
-            size = blogList.size();
-
-            List<ESBlogIndex> esBlogIndexList = blogList.stream()
-                    .map(searchService::buidBlog).collect(Collectors.toList());
-
-            //存入索引库
-            blogRepository.saveAll(esBlogIndexList);
-            // 翻页
-            page++;
-        } while (size == 15);
+//        Long page = 1L;
+//        Long row = 10L;
+//        Integer size = 0;
+//
+//        do {
+//            // 查询blog信息
+//            String result = webFeignClient.getBlogBySearch(page, row);
+//
+//            //构建blog
+//            List<Blog> blogList = WebUtils.getList(result, Blog.class);
+//            size = blogList.size();
+//
+//            List<BlogElasticsearchModel> blogElasticsearchModelList = blogList.stream()
+//                    .map(searchService::buidBlog).collect(Collectors.toList());
+//
+//            //存入索引库
+//            blogRepository.saveAll(blogElasticsearchModelList);
+//            // 翻页
+//            page++;
+//        } while (size == 15);
 
         return ResultUtil.result(SysConf.SUCCESS, MessageConf.OPERATION_SUCCESS);
     }
     @PostMapping("/addEsBlog")
     @ApiOperation(value = "ElasticSearch插入博客", notes = "ElasticSearch插入博客", response = String.class)
-    public String addEsblogToEs(@RequestBody ESBlogIndex esBlogIndex){
-        blogRepository.save(esBlogIndex);
+    public String addEsblogToEs(@RequestBody BlogElasticsearchModel blogElasticsearchModel){
+        blogRepository.save(blogElasticsearchModel);
+        return ResultUtil.result(SysConf.SUCCESS,MessageConf.INSERT_SUCCESS);
+    }
+
+    @PostMapping("/addEsBlogs")
+    @ApiOperation(value = "ElasticSearch插入博客", notes = "ElasticSearch插入博客", response = String.class)
+    public String addEsblogsToEs(@RequestBody List<BlogElasticsearchModel> blogElasticsearchModel){
+        blogRepository.saveAll(blogElasticsearchModel);
         return ResultUtil.result(SysConf.SUCCESS,MessageConf.INSERT_SUCCESS);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.demo.sso.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,10 +17,15 @@ import org.springframework.security.oauth2.provider.approval.JdbcApprovalStore;
 import org.springframework.security.oauth2.provider.client.JdbcClientDetailsService;
 import org.springframework.security.oauth2.provider.code.AuthorizationCodeServices;
 import org.springframework.security.oauth2.provider.code.JdbcAuthorizationCodeServices;
+import org.springframework.security.oauth2.provider.token.TokenEnhancer;
+import org.springframework.security.oauth2.provider.token.TokenEnhancerChain;
 import org.springframework.security.oauth2.provider.token.TokenStore;
 import org.springframework.security.oauth2.provider.token.store.JdbcTokenStore;
+import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
 
 import javax.sql.DataSource;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -39,6 +45,16 @@ public class AuthorizationJwtServerConfig extends AuthorizationServerConfigurerA
      BCryptPasswordEncoder passwordEncoder;
     @Autowired
     DataSource dataSource;
+
+
+    @Autowired
+    @Qualifier("jwtTokenStore")
+    private TokenStore tokenStore;
+    @Autowired
+    private JwtAccessTokenConverter jwtAccessTokenConverter;
+    @Autowired
+    private JwtTokenEnhancer jwtTokenEnhancer;
+
 
     @Bean
     public JdbcClientDetailsService jdbcClientDetailsService(){
@@ -83,18 +99,32 @@ public class AuthorizationJwtServerConfig extends AuthorizationServerConfigurerA
     //检查token的策略
     @Override
     public void configure(AuthorizationServerSecurityConfigurer security) throws Exception {
-        security.allowFormAuthenticationForClients();
-        security.checkTokenAccess("isAuthenticated()");
+        security.allowFormAuthenticationForClients().tokenKeyAccess("permitAll()")
+                // 开启/oauth/check_token验证端口认证权限访问
+//                .checkTokenAccess("isAuthenticated()");
+                .checkTokenAccess("permitAll()");
+//        security.checkTokenAccess("isAuthenticated()");
+
     }
 
     //OAuth2的主配置信息
     @Override
     public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
+        //设置Jwt内容增强
+        TokenEnhancerChain tokenEnhancerChain = new TokenEnhancerChain();
+        List<TokenEnhancer> list = new ArrayList<>();
+        list.add(jwtTokenEnhancer);
+        list.add(jwtAccessTokenConverter);
+        tokenEnhancerChain.setTokenEnhancers(list);
+
         endpoints
                 .approvalStore(approvalStore())
                 .authenticationManager(authenticationManager)
                 .authorizationCodeServices(authorizationCodeServices())
-                .tokenStore(tokenStore());
+                .tokenStore(tokenStore())
+                .accessTokenConverter(jwtAccessTokenConverter)
+                .tokenEnhancer(tokenEnhancerChain);
+
     }
 
 }

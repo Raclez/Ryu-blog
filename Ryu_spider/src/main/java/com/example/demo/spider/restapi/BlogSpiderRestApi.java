@@ -3,6 +3,7 @@ package com.example.demo.spider.restapi;
 
 import com.example.demo.spider.mapper.BlogSpiderMapper;
 import com.example.demo.spider.pipeline.BlogPipeline;
+import com.example.demo.spider.processer.BlogCrawler;
 import com.example.demo.spider.processer.BlogProcesser;
 import com.example.demo.utils.ResultUtil;
 import io.swagger.annotations.Api;
@@ -34,14 +35,9 @@ import javax.management.JMException;
 public class BlogSpiderRestApi {
 
     @Autowired
-    private BlogProcesser blogProcesser;
-
+    BlogCrawler blogCrawler;
     @Autowired
-    private BlogPipeline blogPipeline;
-
-    private Spider spider;
-    @Autowired
-    BlogSpiderMapper blogSpiderMapper;
+    BlogProcesser blogProcesser;
 
     /**
      * 爬取csdn博客
@@ -51,28 +47,10 @@ public class BlogSpiderRestApi {
     @ApiOperation(value = "startSpiderCsdn", notes = "startSpiderCsdn")
     @RequestMapping(value = "/startSpiderCsdn", method = RequestMethod.GET)
     public String startSpiderCsdn() {
-
-        if (spider != null) {
-            spider.run();
-        }
-        //开启蜘蛛爬取内容
-        spider = Spider.create(blogProcesser)
-                .addUrl("https://www.csdn.net/")
-                .addPipeline(blogPipeline)
-                .setScheduler(new QueueScheduler())
-                .thread(10)
-
-                .setScheduler(new RedisScheduler(new JedisPool(new GenericObjectPoolConfig(), "101.33.243.16", 6379, 50000, "475118582")));
-//                .setDownloader(new HttpClientDownloader());
-
-        try {
-            SpiderMonitor.instance().register(spider);
-        } catch (JMException e) {
-            throw new RuntimeException(e);
-        }
-        spider.start();
-
-return ResultUtil.successWithMessage("爬取");
+        blogCrawler.getSpider();
+        blogCrawler.startCrawling();
+        blogProcesser.clearData();
+   return ResultUtil.successWithDataAndMessage(blogProcesser.dataToReturn,"爬取");
 
     }
 
@@ -86,7 +64,7 @@ return ResultUtil.successWithMessage("爬取");
     public String stopSpiderCsdn() {
 
         //关闭蜘蛛爬取内容
-        spider.stop();
+        blogCrawler.stopCrawling();
 
         return "关闭爬虫";
     }
