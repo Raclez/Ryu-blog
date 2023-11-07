@@ -31,7 +31,7 @@ public class SuperEntity<T extends Model> extends Model {
     /**
      * 唯一UID
      */
-    @TableId(value = "uid", type = IdType.ID_WORKER_STR)
+    @TableId(value = "uid", type = IdType.UUID)
     private String uid;
 
     /**

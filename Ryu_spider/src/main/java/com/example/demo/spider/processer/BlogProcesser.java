@@ -40,6 +40,7 @@ BlogCrawler blogCrawler;
     RabbitTemplate rabbitTemplate;
     // 使用 AtomicInteger 来安全计数
     private AtomicInteger count = new AtomicInteger(0);
+    public CountDownLatch countDownLatch;
 
     private int maxPageCount = 10; // 设置最大页面数量
 
@@ -49,8 +50,12 @@ BlogCrawler blogCrawler;
 
     public  ConcurrentHashSet<BlogSpider> dataBuffer = new ConcurrentHashSet<>(); // 使用 BlockingQueue 来实现更细粒度的同步
     private  List<BlogElasticsearchModel> list = new CopyOnWriteArrayList<>(); // 创建一个缓冲列表用于暂存数据
-   public Set<BlogSpider> dataToReturn;
-    public CountDownLatch countDownLatch = new CountDownLatch(1);
+    public ThreadLocal<ConcurrentHashSet<BlogSpider>> threadLocal = ThreadLocal.withInitial(ConcurrentHashSet::new);
+
+    public    boolean isSpider=false;
+
+
+
 
 
     /**
@@ -61,6 +66,16 @@ BlogCrawler blogCrawler;
         // 判断页面是博客列表页还是博客内容页
         if (page.getUrl().regex("https://blog.csdn.net/[a-zA-Z0-9_]+/article/details/[0-9]{9}").match()) {
 
+            // 达到最大页面数量时停止爬取
+            //TODO  不知道为什么出现线程问题先加锁解决
+            int currentCount = count.incrementAndGet();
+
+            if (currentCount> maxPageCount) {
+                isSpider=true;
+                blogCrawler.stopCrawling();
+
+            }
+
             // 处理博客内容页
             String title = page.getHtml().xpath("//h1/text()").get();
             String content = page.getHtml().xpath("//div[@id='content_views']").get();
@@ -70,8 +85,8 @@ BlogCrawler blogCrawler;
 
             BlogElasticsearchModel elasticsearchModel = new BlogElasticsearchModel();
 
-            elasticsearchModel.setTitle(title);
             elasticsearchModel.setLink(url);
+            elasticsearchModel.setTitle(title);
             elasticsearchModel.setContent(content);
             elasticsearchModel.setId( id);
 
@@ -79,11 +94,14 @@ BlogCrawler blogCrawler;
             blogSpider.setLink(url);
             blogSpider.setTitle(title);
             blogSpider.setUid(id);
+            page.putField("blogSpider", blogSpider);
+            page.putField("elasticsearchModel", elasticsearchModel);
+            page.putField("isSpider", isSpider);
 
-//            page.putField("elasticsearchModel", elasticsearchModel);
-//            page.putField("blogSpider", blogSpider);
-           dataBuffer.add(blogSpider);
-           list.add(elasticsearchModel);
+            dataBuffer.add(blogSpider);
+            list.add(elasticsearchModel);
+
+
 
         } else {
             // 处理博客列表页
@@ -94,31 +112,6 @@ BlogCrawler blogCrawler;
             }
         }
 
-        // 达到最大页面数量时停止爬取
-
-        //TODO  不知道为什么出现线程问题先加锁解决
-        if (count.incrementAndGet() >= maxPageCount) {
-
-            blogCrawler.stopCrawling();
-
-
-//            CompletableFuture<Void> saveToMysqlFuture = CompletableFuture.runAsync(() -> {
-////                    blogSpiderService.saveBatch(dataBuffer);
-////                dataToReturn = Collections.unmodifiableSet((dataBuffer));
-//
-//            }, executorService);
-//
-//            CompletableFuture<Void> sendToESFuture = CompletableFuture.runAsync(() -> {
-//                    ESMessage esMessage = new ESMessage();
-//                    esMessage.setData(list);
-//                    esMessage.setOperation(SysConf.ADD);
-////                    sendEsMessage(esMessage);
-//
-//            }, executorService);
-//
-//            CompletableFuture<Void> allOf = CompletableFuture.allOf(saveToMysqlFuture, sendToESFuture);
-//            allOf.join(); // 等待两个任务都完成
-        }
         }
 
 
@@ -133,15 +126,10 @@ BlogCrawler blogCrawler;
 
 
     }
-    public Set<BlogSpider> spiders( ){
-                dataToReturn=dataBuffer;
-        return dataToReturn;
-    }
+
     public void clearData(){
-        list.clear();
-        dataBuffer.clear();
         count.set(0);
-        dataToReturn=null;
+        isSpider=false;
     }
 
 

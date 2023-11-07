@@ -1,6 +1,9 @@
 package com.example.demo.spider.restapi;
 
 
+import cn.hutool.core.collection.ConcurrentHashSet;
+import com.example.demo.commons.pojo.BlogElasticsearchModel;
+import com.example.demo.spider.entity.BlogSpider;
 import com.example.demo.spider.mapper.BlogSpiderMapper;
 import com.example.demo.spider.pipeline.BlogPipeline;
 import com.example.demo.spider.processer.BlogCrawler;
@@ -21,6 +24,8 @@ import us.codecraft.webmagic.scheduler.QueueScheduler;
 import us.codecraft.webmagic.scheduler.RedisScheduler;
 
 import javax.management.JMException;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * 博客爬取RestApi
@@ -38,6 +43,9 @@ public class BlogSpiderRestApi {
     BlogCrawler blogCrawler;
     @Autowired
     BlogProcesser blogProcesser;
+    @Autowired
+    BlogPipeline blogPipeline;
+
 
     /**
      * 爬取csdn博客
@@ -47,10 +55,18 @@ public class BlogSpiderRestApi {
     @ApiOperation(value = "startSpiderCsdn", notes = "startSpiderCsdn")
     @RequestMapping(value = "/startSpiderCsdn", method = RequestMethod.GET)
     public String startSpiderCsdn() {
+//        ConcurrentHashSet<BlogSpider> localData;
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        blogPipeline.countDownLatch= countDownLatch;
+        blogProcesser.clearData();
         blogCrawler.getSpider();
         blogCrawler.startCrawling();
-        blogProcesser.clearData();
-   return ResultUtil.successWithDataAndMessage(blogProcesser.dataToReturn,"爬取");
+        List<BlogElasticsearchModel> data = null;
+
+            data = blogPipeline.getData();
+            System.out.println(data);
+
+        return ResultUtil.successWithDataAndMessage(data,"爬取");
 
     }
 
