@@ -134,7 +134,12 @@ public class ElasticSearchRestApi {
     @PostMapping("/addEsBlogs")
     @ApiOperation(value = "ElasticSearch插入博客", notes = "ElasticSearch插入博客", response = String.class)
     public String addEsblogsToEs(@RequestBody List<BlogElasticsearchModel> blogElasticsearchModel){
-        blogRepository.saveAll(blogElasticsearchModel);
+
+        for (BlogElasticsearchModel elasticsearchModel : blogElasticsearchModel) {
+            blogRepository.save(elasticsearchModel);
+        }
+
+//        blogRepository.saveAll(blogElasticsearchModel);
         return ResultUtil.result(SysConf.SUCCESS,MessageConf.INSERT_SUCCESS);
     }
 }

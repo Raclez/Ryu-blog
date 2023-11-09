@@ -1,6 +1,30 @@
 pipeline {
     agent any
     stages {
+
+        stage('清理容器和工作空间') {
+            steps {
+                // 停止并删除特定名称的Docker容器
+                sh '''
+                         sudo su
+                        docker stop Ryu_gateway && docker rm Ryu_gateway
+                        docker stop Ryu_picture && docker rm Ryu_picture
+                        docker stop Ryu_admin && docker rm Ryu_admin
+                        docker stop Ryu_search && docker rm Ryu_search
+                        docker stop Ryu_spider && docker rm Ryu_spider
+                        docker stop Ryu_web && docker rm Ryu_web
+                        docker stop Ryu_monitor && docker rm Ryu_monitor
+                        docker stop Ryu_sms && docker rm Ryu_sms
+
+                    '''
+
+                // 清理Jenkins工作空间
+                deleteDir()
+            }
+        }
+
+
+
         stage('拉取代码') {
             steps {
                 git credentialsId: 'a1dbebb9-2d4b-426e-804e-42e17be64446', url: 'https://gitee.com/Ryucal/Ryu.blog.git'

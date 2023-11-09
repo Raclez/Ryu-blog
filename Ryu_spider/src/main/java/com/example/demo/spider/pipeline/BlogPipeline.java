@@ -10,8 +10,12 @@ import com.example.demo.spider.mapper.BlogSpiderMapper;
 import com.example.demo.spider.processer.BlogProcesser;
 import com.example.demo.spider.service.BlogSpiderService;
 import com.example.demo.spider.util.IdWorker;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConversionException;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
@@ -23,6 +27,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 /**
  * 博客传输管道
@@ -43,7 +48,7 @@ public class BlogPipeline implements Pipeline {
     @Autowired
     BlogProcesser blogProcesser;
 
-    public  ConcurrentHashSet<BlogSpider> dataBuffer = new ConcurrentHashSet<>(); // 使用 BlockingQueue 来实现更细粒度的同步
+    public  List<BlogSpider> dataBuffer = new CopyOnWriteArrayList<>();
     private  List<BlogElasticsearchModel> list = new CopyOnWriteArrayList<>(); // 创建一个缓冲列表用于暂存数据
     public CountDownLatch countDownLatch;
     @Autowired
@@ -55,46 +60,43 @@ public class BlogPipeline implements Pipeline {
         BlogElasticsearchModel elasticsearchModel = res.get("elasticsearchModel");
         boolean isSpider = res.get("isSpider");
         list.add(elasticsearchModel);
+        dataBuffer.add(blogSpider);
         if (isSpider == true) {
+            ArrayList<BlogSpider> blogSpiders = new ArrayList<>(dataBuffer);
+            ArrayList<BlogElasticsearchModel> elasticsearchModels = new ArrayList<>(list);
+            CompletableFuture<Void> saveToMysqlFuture = CompletableFuture.runAsync(() -> {
+                blogSpiderService.saveBatch(blogSpiders);
+            },threadPoolTaskExecutor);
+                CompletableFuture<Void> sendToESFuture = CompletableFuture.runAsync(() -> {
+                    ESMessage esMessage = new ESMessage();
+                    esMessage.setData(elasticsearchModels);
+                    esMessage.setOperation(SysConf.ADD);
+                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>");
+                    sendEsMessage(esMessage);
+
+                }, threadPoolTaskExecutor);
             countDownLatch.countDown();
 
-
-//            CompletableFuture<Void> saveToMysqlFuture = CompletableFuture.runAsync(() -> {
-//                blogSpiderService.saveBatch(dataBuffer);
-//            },threadPoolTaskExecutor);
-//        }
-
-
         }
-//    public void  sendEsMessage(ESMessage esMessage){
-//        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
-//        rabbitTemplate.convertAndSend("exchange.direct", SysConf.Ryu_BLOG,esMessage);
-//
 
-
-//                CompletableFuture<Void> sendToESFuture = CompletableFuture.runAsync(() -> {
-//                    ESMessage esMessage = new ESMessage();
-//                    esMessage.setData(list);
-//                    esMessage.setOperation(SysConf.ADD);
-////                    sendEsMessage(esMessage);
-//
-//                }, executorService);
-//
-//                CompletableFuture<Void> allOf = CompletableFuture.allOf(saveToMysqlFuture, sendToESFuture);
-//                allOf.join(); // 等待两个任务都完成
-
-//
-//    }
     }
+    public void  sendEsMessage(ESMessage esMessage){
+        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
+        rabbitTemplate.convertAndSend("exchange.direct", SysConf.Ryu_BLOG, esMessage);
+
+    }
+
 public List<BlogElasticsearchModel> getData() {
     try {
         countDownLatch.await();
     } catch (InterruptedException e) {
         throw new RuntimeException(e);
     }
-    ArrayList<BlogElasticsearchModel> blogElasticsearchModels = new ArrayList<>(list);
+    List<BlogElasticsearchModel> blogElasticsearchModels = new ArrayList<>(list);
+
+
     list.clear();
     dataBuffer.clear();
-    return blogElasticsearchModels;
+    return  blogElasticsearchModels;
 }
 }

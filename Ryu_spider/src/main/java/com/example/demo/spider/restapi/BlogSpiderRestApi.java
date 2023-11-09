@@ -24,7 +24,9 @@ import us.codecraft.webmagic.scheduler.QueueScheduler;
 import us.codecraft.webmagic.scheduler.RedisScheduler;
 
 import javax.management.JMException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -61,10 +63,12 @@ public class BlogSpiderRestApi {
         blogProcesser.clearData();
         blogCrawler.getSpider();
         blogCrawler.startCrawling();
-        List<BlogElasticsearchModel> data = null;
+        List<BlogElasticsearchModel> data = blogPipeline.getData();
 
-            data = blogPipeline.getData();
-            System.out.println(data);
+        System.out.println(data.size());
+
+
+
 
         return ResultUtil.successWithDataAndMessage(data,"爬取");
 
@@ -81,8 +85,7 @@ public class BlogSpiderRestApi {
 
         //关闭蜘蛛爬取内容
         blogCrawler.stopCrawling();
-
-        return "关闭爬虫";
+        return "爬虫结束";
     }
 }
 

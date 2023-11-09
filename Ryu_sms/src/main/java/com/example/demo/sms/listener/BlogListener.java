@@ -79,7 +79,6 @@ public class BlogListener {
                 case SysConf.ADD: {
                     log.info("Ryu-sms处理增加博客");
                     List<BlogElasticsearchModel> list = esMessage.getData();
-//                    updateSearch(map);
                 searchFeignClient.addEsblogsToEs(list);
                 }
                 break;
