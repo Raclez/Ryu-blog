@@ -67,14 +67,14 @@ public class BlogPipeline implements Pipeline {
             CompletableFuture<Void> saveToMysqlFuture = CompletableFuture.runAsync(() -> {
                 blogSpiderService.saveBatch(blogSpiders);
             },threadPoolTaskExecutor);
-                CompletableFuture<Void> sendToESFuture = CompletableFuture.runAsync(() -> {
-                    ESMessage esMessage = new ESMessage();
-                    esMessage.setData(elasticsearchModels);
-                    esMessage.setOperation(SysConf.ADD);
-                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>");
-                    sendEsMessage(esMessage);
-
-                }, threadPoolTaskExecutor);
+//                CompletableFuture<Void> sendToESFuture = CompletableFuture.runAsync(() -> {
+//                    ESMessage esMessage = new ESMessage();
+//                    esMessage.setData(elasticsearchModels);
+//                    esMessage.setOperation(SysConf.ADD);
+//                    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>");
+//                    sendEsMessage(esMessage);
+//
+//                }, threadPoolTaskExecutor);
             countDownLatch.countDown();
 
         }

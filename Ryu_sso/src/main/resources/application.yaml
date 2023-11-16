@@ -1,12 +1,12 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://106.52.229.31:3306/security_authority?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://ryu.asia:3306/security_authority?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
     username: root
     password: 475118582
     type: com.alibaba.druid.pool.DruidDataSource
   redis:
-    host: 106.52.229.31
+    host: ryu.asia
     port: 6379
     password: 475118582
 

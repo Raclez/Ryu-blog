@@ -16,6 +16,6 @@ import java.util.List;
  * @date 2021年1月18日19:09:20
  */
 public interface BlogRepository extends ElasticsearchRepository<BlogElasticsearchModel, String> {
-    @Query("{\"multi_match\": {\"query\": \"?0\", \"fields\": [\"title^0.75\", \"summary^0.75\", \"content^0.1\"]}}")
+    @Query("{\"multi_match\": {\"query\": \"?0\", \"fields\": [\"title^0.9\", \"summary^0.75\", \"content^0.5\"]}}")
     Page<BlogElasticsearchModel> findByKey(String key, Pageable pageable);
 }

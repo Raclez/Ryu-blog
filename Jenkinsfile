@@ -6,15 +6,14 @@ pipeline {
             steps {
                 // 停止并删除特定名称的Docker容器
                 sh '''
-                         sudo su
-                        docker stop Ryu_gateway && docker rm Ryu_gateway
-                        docker stop Ryu_picture && docker rm Ryu_picture
-                        docker stop Ryu_admin && docker rm Ryu_admin
-                        docker stop Ryu_search && docker rm Ryu_search
-                        docker stop Ryu_spider && docker rm Ryu_spider
-                        docker stop Ryu_web && docker rm Ryu_web
-                        docker stop Ryu_monitor && docker rm Ryu_monitor
-                        docker stop Ryu_sms && docker rm Ryu_sms
+                       sudo docker stop Ryu_gateway &&sudo docker rm Ryu_gateway
+                       sudo docker stop Ryu_picture &&sudo docker rm Ryu_picture
+                      sudo  docker stop Ryu_admin &&sudo docker rm Ryu_admin
+                      sudo  docker stop Ryu_search &&sudo docker rm Ryu_search
+                      sudo  docker stop Ryu_spider &&sudo docker rm Ryu_spider
+                      sudo  docker stop Ryu_web &&sudo docker rm Ryu_web
+                      sudo docker stop Ryu_monitor &&sudo docker rm Ryu_monitor
+                      sudo  docker stop Ryu_sms &&sudo docker rm Ryu_sms
 
                     '''
 

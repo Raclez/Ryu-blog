@@ -43,7 +43,7 @@ BlogCrawler blogCrawler;
     private AtomicInteger count = new AtomicInteger(0);
     public CountDownLatch countDownLatch;
 
-    private int maxPageCount=400; // 设置最大页面数量
+    private int maxPageCount=2000; // 设置最大页面数量
 
     private int currentCount;
     private  IdWorkerUtils idWorkerUtils=new IdWorkerUtils();;
