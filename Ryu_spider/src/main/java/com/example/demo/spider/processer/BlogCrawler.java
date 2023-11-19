@@ -38,7 +38,7 @@ public  Spider getSpider() {
 
         if (spider == null) {
                     spider = Spider.create(blogProcesser)
-                            .addUrl("https://www.csdn.net/")
+                            .addUrl("https://blog.csdn.net/")
                             .addPipeline(blogPipeline)
                             .setExecutorService(Executors.newFixedThreadPool(10))
                             .setScheduler(new RedisScheduler(new JedisPool(new GenericObjectPoolConfig(), "ryu.asia", 6379, 50000 ,"475118582")));

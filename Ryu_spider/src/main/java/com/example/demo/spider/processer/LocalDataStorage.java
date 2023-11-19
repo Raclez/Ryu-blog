@@ -1,12 +1,12 @@
 package com.example.demo.spider.processer;
 
-import com.example.demo.spider.entity.BlogSpider;
-import org.springframework.stereotype.Component;
 
+import com.example.demo.commons.entity.BlogSpider;
+import org.springframework.stereotype.Component;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.List;
 import java.util.Set;
+
 
 @Component
 public class LocalDataStorage {

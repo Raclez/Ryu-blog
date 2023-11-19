@@ -1,8 +1,9 @@
 package com.example.demo.spider.mapper;
 
 
+;
 import com.example.demo.base.mapper.SuperMapper;
-import com.example.demo.spider.entity.BlogSpider;
+import com.example.demo.commons.entity.BlogSpider;
 import org.apache.ibatis.annotations.Mapper;
 
 

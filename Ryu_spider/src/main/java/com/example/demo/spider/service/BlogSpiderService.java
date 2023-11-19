@@ -1,9 +1,8 @@
 package com.example.demo.spider.service;
 
+
 import com.example.demo.base.service.SuperService;
-import com.example.demo.spider.entity.BlogSpider;
-
-
+import com.example.demo.commons.entity.BlogSpider;
 
 /**
  * <p>

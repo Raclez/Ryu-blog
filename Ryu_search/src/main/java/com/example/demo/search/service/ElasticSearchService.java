@@ -1,6 +1,8 @@
 package com.example.demo.search.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.demo.commons.entity.Blog;
+import com.example.demo.commons.entity.BlogSpider;
 import com.example.demo.commons.entity.Tag;
 import com.example.demo.commons.pojo.BlogElasticsearchModel;
 import com.example.demo.search.global.SysConf;

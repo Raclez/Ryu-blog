@@ -1,6 +1,6 @@
 package com.example.demo.spider.restapi;
 
-import com.example.demo.spider.entity.PictureSpider;
+import com.example.demo.commons.pojo.PictureSpider;
 import com.example.demo.spider.pipeline.PicturePieline;
 import com.example.demo.spider.processer.PictureProcesser;
 import com.example.demo.utils.ResultUtil;

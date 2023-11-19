@@ -1,9 +1,9 @@
 package com.example.demo.spider.processer;
 
 import cn.hutool.core.collection.ConcurrentHashSet;
+import com.example.demo.commons.entity.BlogSpider;
 import com.example.demo.commons.pojo.BlogElasticsearchModel;
 import com.example.demo.commons.pojo.ESMessage;
-import com.example.demo.spider.entity.BlogSpider;
 import com.example.demo.spider.global.SysConf;
 import com.example.demo.spider.service.BlogSpiderService;
 import com.example.demo.utils.IdWorkerUtils;
@@ -18,6 +18,7 @@ import us.codecraft.webmagic.processor.PageProcessor;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -33,25 +34,16 @@ public class BlogProcesser implements PageProcessor {
 BlogCrawler blogCrawler;
 
     @Autowired
-    private BlogSpiderService blogSpiderService;
-
-    @Autowired
     LocalDataStorage localDataStorage;
     @Autowired
     RabbitTemplate rabbitTemplate;
     // 使用 AtomicInteger 来安全计数
     private AtomicInteger count = new AtomicInteger(0);
-    public CountDownLatch countDownLatch;
-
-    private int maxPageCount=2000; // 设置最大页面数量
-
-    private int currentCount;
+    @Value("${spider.count}")
+    private int maxPageCount;// 设置最大页面数量
     private  IdWorkerUtils idWorkerUtils=new IdWorkerUtils();;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(4);
 
-    public ThreadLocal<ConcurrentHashSet<BlogSpider>> threadLocal = ThreadLocal.withInitial(ConcurrentHashSet::new);
-
-    public   volatile   boolean isSpider=false;
+    public AtomicBoolean isSpider=new AtomicBoolean(false);
 
 
 
@@ -77,7 +69,7 @@ BlogCrawler blogCrawler;
             int currentCount = count.incrementAndGet();
 
             if (currentCount> maxPageCount) {
-                isSpider=true;
+                isSpider.set(true);
                 blogCrawler.stopCrawling();
             }
 
@@ -112,16 +104,11 @@ BlogCrawler blogCrawler;
     public Site getSite() {
         return Site.me().setCharset("utf8").setRetryTimes(2).setSleepTime(2000).setTimeOut(4000);
     }
-    public void  sendEsMessage(ESMessage esMessage){
-        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
-        rabbitTemplate.convertAndSend("exchange.direct", SysConf.Ryu_BLOG,esMessage);
 
-
-    }
 
     public void clearData(){
         count.set(0);
-        isSpider=false;
+        isSpider.set(false);
     }
 
 

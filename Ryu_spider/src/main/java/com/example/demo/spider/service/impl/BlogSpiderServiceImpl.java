@@ -1,8 +1,7 @@
 package com.example.demo.spider.service.impl;
 
-
 import com.example.demo.base.serviceImpl.SuperServiceImpl;
-import com.example.demo.spider.entity.BlogSpider;
+import com.example.demo.commons.entity.BlogSpider;
 import com.example.demo.spider.mapper.BlogSpiderMapper;
 import com.example.demo.spider.service.BlogSpiderService;
 import lombok.extern.slf4j.Slf4j;

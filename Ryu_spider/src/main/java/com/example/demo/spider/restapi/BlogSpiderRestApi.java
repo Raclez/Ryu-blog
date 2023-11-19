@@ -3,8 +3,6 @@ package com.example.demo.spider.restapi;
 
 import cn.hutool.core.collection.ConcurrentHashSet;
 import com.example.demo.commons.pojo.BlogElasticsearchModel;
-import com.example.demo.spider.entity.BlogSpider;
-import com.example.demo.spider.mapper.BlogSpiderMapper;
 import com.example.demo.spider.pipeline.BlogPipeline;
 import com.example.demo.spider.processer.BlogCrawler;
 import com.example.demo.spider.processer.BlogProcesser;
@@ -17,14 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-import redis.clients.jedis.JedisPool;
-import us.codecraft.webmagic.Spider;
-import us.codecraft.webmagic.monitor.SpiderMonitor;
-import us.codecraft.webmagic.scheduler.QueueScheduler;
-import us.codecraft.webmagic.scheduler.RedisScheduler;
-
-import javax.management.JMException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
