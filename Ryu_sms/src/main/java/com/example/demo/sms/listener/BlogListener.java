@@ -14,7 +14,10 @@ import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -37,52 +40,85 @@ public class BlogListener {
 
     @Autowired
     private RedisUtil redisUtil;
-   int MAX_RETRY_ATTEMPTS=5;
+    @Autowired
+    RabbitTemplate rabbitTemplate;
+   int MAX_RETRY_ATTEMPTS=2;
     @Resource
     private SearchFeignClient searchFeignClient;
     @Autowired
     ObjectMapper objectMapper;
 
-    // TODO 在这里同时需要对Redis和Solr进行操作，同时利用MQ来保证数据一致性
     @RabbitListener(queues = "Ryu.blog")
-    public void updateRedis(Message esMessage, Channel channel) {
-        log.info("Ryu-sms处理增加博客");
+    public void spider(BlogElasticsearchModel esMessage, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
 
-        try {
-            List<BlogElasticsearchModel> elasticsearchModels = objectMapper.readValue(esMessage.getBody(), new TypeReference<List<BlogElasticsearchModel>>(){});
-            searchFeignClient.addEsblogsToEs(elasticsearchModels);
-            channel.basicAck(esMessage.getMessageProperties().getDeliveryTag(),false);
+        log.info("Ryu-sms处理增加博客");
+    try {
+
+            String s = searchFeignClient.addEsblogToEs(esMessage);
+            if(s.equals("{\"message\":\"搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败\",\"code\":\"error\"}"))
+                throw new Exception("搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败zzzzzzz");
+            channel.basicAck(deliveryTag,false);
 
         } catch (Exception e) {
-            log.error("Failed to process message. Exception: {}", e.getMessage());
-
-            // 获取消息的重试次数
-            int retryCount = esMessage.getMessageProperties().getHeader("retryCount") != null ?
-                    Integer.parseInt(esMessage.getMessageProperties().getHeader("retryCount")) : 0;
-
-            // 如果重试次数小于限制值，重新发送消息
-            if (retryCount < MAX_RETRY_ATTEMPTS) {
-                try {
-                    // 将重试次数+1，并重新发送消息
-                    esMessage.getMessageProperties().getHeaders().put("retryCount", String.valueOf(retryCount + 1));
-                    channel.basicNack(esMessage.getMessageProperties().getDeliveryTag(), false, true);
-                } catch (IOException ex) {
-                    log.error("Failed to requeue message. Exception: {}", ex.getMessage());
-                }
-            } else {
                 log.error("Reached maximum retry attempts for message. Further processing halted.");
                 // 如果达到最大重试次数，不再重试，进行其他处理，比如记录到死信队列等
                 // 这里你可以添加额外的逻辑来处理达到最大重试次数后的操作
                 // 将消息发送到死信队列
+                try {
+                    channel.basicReject(deliveryTag, false);
+                    rabbitTemplate.convertAndSend("exchange.spider", "Ryu.spider", esMessage);
+//                    channel.basicAck(deliveryTag,  false);
+
+                } catch (IOException ex) {
+                    log.error("Failed to send message to dead letter queue. Exception: {}", ex.getMessage());
+                }
+
+        }
+
+
+
+    // TODO 在这里同时需要对Redis和Solr进行操作，同时利用MQ来保证数据一致性
+//    @RabbitListener(queues = "Ryu.blog")
+//    public void updateRedis(Message esMessage, Channel channel) {
+//        log.info("Ryu-sms处理增加博客");
+//
+//        try {
+//            List<BlogElasticsearchModel> elasticsearchModels = objectMapper.readValue(esMessage.getBody(), new TypeReference<List<BlogElasticsearchModel>>(){});
+//            String s = searchFeignClient.addEsblogsToEs(elasticsearchModels);
+//            if(s.equals("{\"message\":\"搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败\",\"code\":\"error\"}"))
+//                throw new Exception("搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败zzzzzzz");
+//            channel.basicAck(esMessage.getMessageProperties().getDeliveryTag(),false);
+//
+//        } catch (Exception e) {
+////            log.error("Failed to process message. Exception: {}", e.getMessage());
+////
+////            // 获取消息的重试次数
+////            int retryCount = esMessage.getMessageProperties().getHeader("retryCount") != null ?
+////                    esMessage.getMessageProperties().getHeader("retryCount") : 0;
+////                log.info("消息重试次数: {}", retryCount);
+////            // 如果重试次数小于限制值，重新发送消息
+////            if (retryCount < MAX_RETRY_ATTEMPTS) {
+////                try {
+////                    // 将重试次数+1，并重新发送消息
+////                    esMessage.getMessageProperties().setHeader("retryCount",++retryCount);
+////                    channel.basicNack(esMessage.getMessageProperties().getDeliveryTag(), false, true);
+////                } catch (IOException ex) {
+////                    log.error("Failed to requeue message. Exception: {}", ex.getMessage());
+////                }
+////            } else {
+//                log.error("Reached maximum retry attempts for message. Further processing halted.");
+//                // 如果达到最大重试次数，不再重试，进行其他处理，比如记录到死信队列等
+//                // 这里你可以添加额外的逻辑来处理达到最大重试次数后的操作
+//                // 将消息发送到死信队列
 //                try {
-//                    String originalQueue = esMessage.getMessageProperties().getReceivedRoutingKey();
-//                    channel.basicNack(esMessage.getMessageProperties().getDeliveryTag(), false, false);
-//                    channel.basicPublish("deadLetterExchange", originalQueue, null, esMessage.getBody());
+//                    rabbitTemplate.convertAndSend("exchange.spider", "Ryu.spider", esMessage);
+//                    channel.basicAck(esMessage.getMessageProperties().getDeliveryTag(),  false);
+//
 //                } catch (IOException ex) {
 //                    log.error("Failed to send message to dead letter queue. Exception: {}", ex.getMessage());
 //                }
-            }
-        }
+////            }
+//        }
 //        if (esMessage != null) {
 //            String operation = esMessage.getOperation();
 //

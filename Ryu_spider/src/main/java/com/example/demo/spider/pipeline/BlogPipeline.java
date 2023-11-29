@@ -7,6 +7,7 @@ import com.example.demo.commons.pojo.BlogElasticsearchModel;
 import com.example.demo.commons.pojo.ESMessage;
 import com.example.demo.spider.global.SysConf;
 import com.example.demo.spider.processer.BlogProcesser;
+import com.example.demo.spider.processer.LocalDataStorage;
 import com.example.demo.spider.service.BlogSpiderService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,6 +57,8 @@ public class BlogPipeline implements Pipeline {
    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
     @Autowired
     ObjectMapper objectMapper;
+    @Autowired
+    LocalDataStorage localDataStorage;
 
     @Override
     public void process(ResultItems res, Task task) {
@@ -64,31 +67,38 @@ public class BlogPipeline implements Pipeline {
         AtomicBoolean isSpider = res.get("isSpider");
         list.add(elasticsearchModel);
         dataBuffer.add(blogSpider);
+
+        sendEsMessage(elasticsearchModel);
         if (isSpider.get()) {
             ArrayList<BlogSpider> blogSpiders = new ArrayList<>(dataBuffer);
             ArrayList<BlogElasticsearchModel> elasticsearchModels = new ArrayList<>(list);
             CompletableFuture<Void> saveToMysqlFuture = CompletableFuture.runAsync(() -> {
                 blogSpiderService.saveBatch(blogSpiders);
             },threadPoolTaskExecutor);
-                CompletableFuture<Void> sendToESFuture = CompletableFuture.runAsync(() -> {
-                    byte[] bytes;
-                    try {
-                         bytes = objectMapper.writeValueAsBytes(elasticsearchModels);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                    Message message = MessageBuilder.withBody(bytes).setContentType(MessageProperties.CONTENT_TYPE_JSON).setHeader("retryCount",1).build();
-                    sendEsMessage(message);
-                }, threadPoolTaskExecutor);
-            countDownLatch.countDown();
+
+//                CompletableFuture<Void> sendToESFuture = CompletableFuture.runAsync(() -> {
+//                    byte[] bytes;
+//                    try {
+//                         bytes = objectMapper.writeValueAsBytes(elasticsearchModels);
+//                    } catch (JsonProcessingException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                    Message message = MessageBuilder.withBody(bytes).setContentType(MessageProperties.CONTENT_TYPE_JSON).setHeader("retryCount",1).build();
+//                    sendEsMessage(message);
+//                }, threadPoolTaskExecutor);
+
+
+//                CompletableFuture.runAsync(() ->{
+//                    localDataStorage.generateMarkdownFiles(list);
+//                },threadPoolTaskExecutor);
+//            countDownLatch.countDown();
 
         }
 
     }
-    public void  sendEsMessage(Message esMessage){
+    public void  sendEsMessage(BlogElasticsearchModel elasticsearchModel){
         rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
-        rabbitTemplate.convertAndSend("exchange.direct", SysConf.Ryu_BLOG, esMessage);
-
+        rabbitTemplate.convertAndSend("exchange.direct", SysConf.Ryu_BLOG, elasticsearchModel);
     }
 
 public List<BlogElasticsearchModel> getData() {

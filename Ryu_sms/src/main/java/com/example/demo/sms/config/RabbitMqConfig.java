@@ -21,6 +21,35 @@ public class RabbitMqConfig {
     public static final String ROUTING_KEY_EMAIL = "Ryu.email";
     public static final String ROUTING_KEY_SMS = "Ryu.sms";
 
+    public static final String DEAD_LETTER_EXCHANGE = "exchange.spider";
+    public static final String DEAD_LETTER_QUEUE = "Ryu.spider";
+    public static final String DEAD_LETTER_ROUTING_KEY = "Ryu.spider";
+
+    /**
+     * 声明死信交换机
+     */
+    @Bean(DEAD_LETTER_EXCHANGE)
+    public Exchange deadLetterExchange() {
+        return ExchangeBuilder.directExchange(DEAD_LETTER_EXCHANGE).durable(true).build();
+    }
+
+    /**
+     * 声明死信队列
+     */
+    @Bean(DEAD_LETTER_QUEUE)
+    public Queue deadLetterQueue() {
+        return QueueBuilder.durable(DEAD_LETTER_QUEUE).build();
+    }
+
+    /**
+     * 死信队列绑定死信交换机
+     */
+    @Bean
+    public Binding deadLetterBinding(@Qualifier(DEAD_LETTER_QUEUE) Queue queue, @Qualifier(DEAD_LETTER_EXCHANGE) Exchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(DEAD_LETTER_ROUTING_KEY).noargs();
+    }
+
+
     /**
      * 声明交换机
      */
