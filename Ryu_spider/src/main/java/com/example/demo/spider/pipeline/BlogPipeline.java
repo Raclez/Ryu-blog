@@ -65,16 +65,17 @@ public class BlogPipeline implements Pipeline {
         BlogSpider blogSpider = res.get("blogSpider");
         BlogElasticsearchModel elasticsearchModel = res.get("elasticsearchModel");
         AtomicBoolean isSpider = res.get("isSpider");
-        list.add(elasticsearchModel);
-        dataBuffer.add(blogSpider);
+//        list.add(elasticsearchModel);
+//        dataBuffer.add(blogSpider);
 
         sendEsMessage(elasticsearchModel);
-        if (isSpider.get()) {
-            ArrayList<BlogSpider> blogSpiders = new ArrayList<>(dataBuffer);
-            ArrayList<BlogElasticsearchModel> elasticsearchModels = new ArrayList<>(list);
-            CompletableFuture<Void> saveToMysqlFuture = CompletableFuture.runAsync(() -> {
-                blogSpiderService.saveBatch(blogSpiders);
-            },threadPoolTaskExecutor);
+        blogSpiderService.save(blogSpider);
+//        if (isSpider.get()) {
+//            ArrayList<BlogSpider> blogSpiders = new ArrayList<>(dataBuffer);
+//            ArrayList<BlogElasticsearchModel> elasticsearchModels = new ArrayList<>(list);
+//            CompletableFuture<Void> saveToMysqlFuture = CompletableFuture.runAsync(() -> {
+//                blogSpiderService.saveBatch(blogSpiders);
+//            },threadPoolTaskExecutor);
 
 //                CompletableFuture<Void> sendToESFuture = CompletableFuture.runAsync(() -> {
 //                    byte[] bytes;
@@ -93,7 +94,7 @@ public class BlogPipeline implements Pipeline {
 //                },threadPoolTaskExecutor);
 //            countDownLatch.countDown();
 
-        }
+//        }
 
     }
     public void  sendEsMessage(BlogElasticsearchModel elasticsearchModel){

@@ -53,15 +53,11 @@ public class BlogSpiderRestApi {
         blogProcesser.clearData();
         blogCrawler.getSpider();
         blogCrawler.startCrawling();
-        List<BlogElasticsearchModel> data = blogPipeline.getData();
-
-        System.out.println(data.size());
+//        List<BlogElasticsearchModel> data = blogPipeline.getData();
 
 
-
-
-        return ResultUtil.successWithDataAndMessage(data,"爬取");
-
+//        return ResultUtil.successWithDataAndMessage(data,"爬取");
+    return  ResultUtil.successWithMessage("okkkk");
     }
 
     /**
