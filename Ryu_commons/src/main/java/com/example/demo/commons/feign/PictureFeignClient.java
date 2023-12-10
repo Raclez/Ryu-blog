@@ -15,7 +15,7 @@ import java.util.List;
  *
  * @author
  */
-@FeignClient(name = "ryu-resource", configuration = FeignConfiguration.class, fallback = PictureFeignFallback.class)
+@FeignClient(name = "Ryu-resource", configuration = FeignConfiguration.class, fallback = PictureFeignFallback.class)
 public interface PictureFeignClient {
 
     /**
