@@ -26,7 +26,7 @@ pipeline {
 
         stage('拉取代码') {
             steps {
-                git credentialsId: 'a1dbebb9-2d4b-426e-804e-42e17be64446', url: 'https://gitee.com/Ryucal/Ryu.blog.git'
+                git credentialsId: 'a1dbebb9-2d4b-426e-804e-42e17be64446', url: 'https://gitee.com/Ryucal/Ryu-blog.git'
                 echo '拉取成功'
             }
         }
@@ -57,7 +57,7 @@ pipeline {
                 stage('构建picture镜像') {
                     steps {
                         sh '''cd Ryu_picture/target
-            docker build -t ryu-picture:latest -f ../src/main/resources/Dockerfile .'''
+            docker build -t ryu-resource:latest -f ../src/main/resources/Dockerfile .'''
                         echo '运行成功'
                     }
                 }
@@ -123,7 +123,7 @@ pipeline {
 //                stage('启动picture镜像') {
 //                    steps {
 //                        sh '''
-//            docker run   -d --name ryu-picture -p 8602:8602 ryu-picture:latest
+//            docker run   -d --name ryu-resource -p 8602:8602 ryu-resource:latest
 //                        '''
 //                        echo '运行成功'
 //                    }
@@ -190,7 +190,7 @@ pipeline {
                 stage('启动picture镜像') {
                     steps {
                         sh '''
-            docker run   -d --name ryu-picture -p 8602:8602 ryu-picture:latest
+            docker run   -d --name ryu-resource -p 8602:8602 ryu-resource:latest
                         '''
                         echo '运行成功'
                     }
