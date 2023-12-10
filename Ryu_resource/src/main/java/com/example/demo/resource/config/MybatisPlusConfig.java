@@ -26,7 +26,7 @@ public class MybatisPlusConfig {
     @Bean
     public MapperScannerConfigurer mapperScannerConfigurer() {
         MapperScannerConfigurer scannerConfigurer = new MapperScannerConfigurer();
-        scannerConfigurer.setBasePackage("com.example.demo.picture.mapper*");
+        scannerConfigurer.setBasePackage("com.example.demo.resource.mapper*");
         return scannerConfigurer;
     }
 
