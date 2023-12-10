@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Component
 public class BlogCrawler {
@@ -29,7 +30,8 @@ public class BlogCrawler {
     @Autowired
     private BlogPipeline   blogPipeline;
 
-
+    @Autowired
+    ThreadPoolTaskExecutor ThreadPoolTaskExecutor;
     private Spider spider;
 
 
@@ -40,7 +42,8 @@ public  Spider getSpider() {
                     spider = Spider.create(blogProcesser)
                             .addUrl("https://blog.csdn.net/")
                             .addPipeline(blogPipeline)
-                            .setExecutorService(Executors.newFixedThreadPool(10))
+                            .setExecutorService(ThreadPoolTaskExecutor.getThreadPoolExecutor())
+//                            .setExecutorService(Executors.newFixedThreadPool(10))
                             .setScheduler(new RedisScheduler(new JedisPool(new GenericObjectPoolConfig(), "ryu.asia", 6379, 50000 ,"475118582")));
 //                            .setDownloader(new HttpClientDownloader());
             }

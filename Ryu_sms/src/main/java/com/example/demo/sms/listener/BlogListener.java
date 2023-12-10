@@ -2,17 +2,14 @@ package com.example.demo.sms.listener;
 
 import com.example.demo.commons.feign.SearchFeignClient;
 import com.example.demo.commons.pojo.BlogElasticsearchModel;
-import com.example.demo.commons.pojo.ESMessage;
 import com.example.demo.sms.global.RedisConf;
 import com.example.demo.sms.global.SysConf;
 import com.example.demo.utils.JsonUtils;
 import com.example.demo.utils.RedisUtil;
 import com.example.demo.base.global.Constants;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.AmqpHeaders;
@@ -25,7 +22,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,6 +44,8 @@ public class BlogListener {
     @Autowired
     ObjectMapper objectMapper;
 
+
+
     @RabbitListener(queues = "Ryu.blog")
     public void spider(BlogElasticsearchModel esMessage, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
 
@@ -55,7 +53,10 @@ public class BlogListener {
     try {
 
             String s = searchFeignClient.addEsblogToEs(esMessage);
-            if(s.equals("{\"message\":\"搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败\",\"code\":\"error\"}"))
+//        BlogSpider blogSpider = new BlogSpider();
+//        BeanUtils.copyProperties(esMessage, blogSpider);
+//        blogSpiderService.save(blogSpider);
+        if(s.equals("{\"message\":\"搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败\",\"code\":\"error\"}"))
                 throw new Exception("搜索服务出现异常, 服务降级返回, 添加ElasticSearch索引失败zzzzzzz");
             channel.basicAck(deliveryTag,false);
 

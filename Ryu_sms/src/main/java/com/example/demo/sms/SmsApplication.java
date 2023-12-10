@@ -18,7 +18,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         "com.example.demo.utils",
         "com.example.demo.commons.config.feign",
         "com.example.demo.commons.fallback",
-        "com.example.demo.sms"
+        "com.example.demo.sms",
+        "com.example.demo.xo"
 })
 public class SmsApplication {
 

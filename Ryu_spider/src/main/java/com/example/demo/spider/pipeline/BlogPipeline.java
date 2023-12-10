@@ -8,8 +8,9 @@ import com.example.demo.commons.pojo.ESMessage;
 import com.example.demo.spider.global.SysConf;
 import com.example.demo.spider.processer.BlogProcesser;
 import com.example.demo.spider.processer.LocalDataStorage;
+
+
 import com.example.demo.spider.service.BlogSpiderService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.entity.ContentType;
 import org.springframework.amqp.core.Message;
@@ -64,12 +65,15 @@ public class BlogPipeline implements Pipeline {
     public void process(ResultItems res, Task task) {
         BlogSpider blogSpider = res.get("blogSpider");
         BlogElasticsearchModel elasticsearchModel = res.get("elasticsearchModel");
-        AtomicBoolean isSpider = res.get("isSpider");
+//        AtomicBoolean isSpider = res.get("isSpider");
 //        list.add(elasticsearchModel);
 //        dataBuffer.add(blogSpider);
+        CompletableFuture<Void> saveToMysqlFuture = CompletableFuture.runAsync(() -> {
+                blogSpiderService.save(blogSpider);
+            },threadPoolTaskExecutor);
 
         sendEsMessage(elasticsearchModel);
-        blogSpiderService.save(blogSpider);
+
 //        if (isSpider.get()) {
 //            ArrayList<BlogSpider> blogSpiders = new ArrayList<>(dataBuffer);
 //            ArrayList<BlogElasticsearchModel> elasticsearchModels = new ArrayList<>(list);

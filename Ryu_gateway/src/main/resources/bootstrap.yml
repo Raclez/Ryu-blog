@@ -63,10 +63,10 @@ spring:
             - Path=/Ryu-search/**
           filters:
             - StripPrefix=1
-        - id: Ryu_picture
-          uri: lb://Ryu-picture
+        - id: Ryu_resource
+          uri: lb://Ryu-resource
           predicates:
-            - Path=/Ryu-picture/**
+            - Path=/Ryu-resource/**
           filters:
             - StripPrefix=1
         - id: Ryu_monitor

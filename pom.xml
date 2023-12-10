@@ -62,7 +62,7 @@
         <module>Ryu_xo</module>
         <module>Ryu_admin</module>
         <module>Ryu_web</module>
-        <module>Ryu_picture</module>
+        <module>Ryu_resource</module>
         <module>Ryu_sms</module>
         <module>Ryu_search</module>
         <module>Ryu_monitor</module>

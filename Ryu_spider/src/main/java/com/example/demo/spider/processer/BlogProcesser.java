@@ -1,14 +1,9 @@
 package com.example.demo.spider.processer;
 
-import cn.hutool.core.collection.ConcurrentHashSet;
 import com.example.demo.commons.entity.BlogSpider;
 import com.example.demo.commons.pojo.BlogElasticsearchModel;
-import com.example.demo.commons.pojo.ESMessage;
-import com.example.demo.spider.global.SysConf;
-import com.example.demo.spider.service.BlogSpiderService;
 import com.example.demo.utils.IdWorkerUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

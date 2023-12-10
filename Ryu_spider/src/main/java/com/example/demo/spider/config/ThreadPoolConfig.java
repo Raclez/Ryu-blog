@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import java.util.concurrent.ThreadPoolExecutor;
+
 @Configuration
 public class ThreadPoolConfig {
 
@@ -20,13 +22,12 @@ public class ThreadPoolConfig {
     @Bean
     public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(4);
-        executor.setMaxPoolSize(8);
-//        executor.setKeepAliveSeconds();
-//        executor.setKeepAliveSeconds(keepAliveTime);
-//        executor.setKeepAliveSeconds(30);
-        // 可根据需要设置更多属性，例如队列容量、线程前缀等
-
+        executor.setCorePoolSize(16);
+        executor.setMaxPoolSize(16); // 最大线程数可以根据实际情况进行调整
+        executor.setQueueCapacity(100); // 队列大小也可以根据需求进行调整
+        executor.setThreadNamePrefix("spider-threadpool-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy()); // 拒绝策略
+        executor.initialize();
         return executor;
     }
 }

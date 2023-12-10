@@ -22,4 +22,5 @@ public interface AdminFeignClient {
     @RequestMapping(value = "/systemConfig/getSystemConfig", method = RequestMethod.GET)
     public String getSystemConfig();
 
+
 }
