@@ -10,8 +10,7 @@ import java.util.List;
 
 /**
  * ESBlogIndex
- */
-@Document(indexName = "blogspider", shards = 5, replicas = 1)
+ */@Document(indexName = "blogspider", shards = 5, replicas = 1)
 //@Setting(settingPath = "ik-analyzer-custom.json")
 @Data
 public class BlogElasticsearchModel {
@@ -30,3 +29,4 @@ public class BlogElasticsearchModel {
 
 
 }
+

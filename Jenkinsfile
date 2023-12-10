@@ -54,9 +54,9 @@ pipeline {
                         echo '运行成功'
                     }
                 }
-                stage('构建picture镜像') {
+                stage('构建resource镜像') {
                     steps {
-                        sh '''cd Ryu_picture/target
+                        sh '''cd Ryu_resource/target
             docker build -t ryu-resource:latest -f ../src/main/resources/Dockerfile .'''
                         echo '运行成功'
                     }
