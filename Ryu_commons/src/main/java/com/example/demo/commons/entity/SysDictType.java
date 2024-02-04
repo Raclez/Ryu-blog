@@ -1,5 +1,6 @@
 package com.example.demo.commons.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.example.demo.base.entity.SuperEntity;
 import lombok.Data;
@@ -20,6 +21,7 @@ public class SysDictType extends SuperEntity<SysDictType> {
     /**
      * 自增键 oid
      */
+@TableField("oid")
     private Long oid;
 
     /**

@@ -4,7 +4,9 @@ package com.example.demo.admin.restapi;
 import com.example.demo.admin.annotion.AuthorityVerify.AuthorityVerify;
 import com.example.demo.admin.annotion.AvoidRepeatableCommit.AvoidRepeatableCommit;
 import com.example.demo.admin.annotion.OperationLogger.OperationLogger;
+import com.example.demo.commons.entity.CategoryMenu;
 import com.example.demo.utils.ResultUtil;
+import com.example.demo.utils.SnowflakeIdWorker;
 import com.example.demo.xo.service.CategoryMenuService;
 import com.example.demo.xo.vo.CategoryMenuVO;
 import com.example.demo.base.exception.ThrowableUtils;
@@ -12,6 +14,8 @@ import com.example.demo.base.validator.group.Delete;
 import com.example.demo.base.validator.group.GetList;
 import com.example.demo.base.validator.group.Insert;
 import com.example.demo.base.validator.group.Update;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +23,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
 
 /**
  * 菜单表 RestApi
@@ -105,5 +113,60 @@ public class CategoryMenuRestApi {
         ThrowableUtils.checkParamArgument(result);
         return categoryMenuService.stickCategoryMenu(categoryMenuVO);
     }
-}
+    public static void main(String[] args) {
+        File file = new File("/Users/ryu/Desktop/json"); // 你的 JSON 文件路径
+        File outputFile = new File("/Users/ryu/Desktop/output.json");
 
+
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            List<CategoryMenu> menus = objectMapper.readValue(file, new TypeReference<List<CategoryMenu>>() {
+            });
+
+            SnowflakeIdWorker snowflakeIdWorker = new SnowflakeIdWorker(0, 0);// 初始化 Snowflake ID 生成器
+
+            // 现在你可以使用 menus 对象来处理菜单数据了
+            for (CategoryMenu menu : menus) {
+                long newUid = snowflakeIdWorker.nextId(); // 生成新的 UID
+                menu.setUid(String.valueOf(newUid)); // 设置新的 UID
+                // 更新子菜单的父 UID
+                List<CategoryMenu> childMenus = menu.getChildCategoryMenu();
+                if (childMenus != null && !childMenus.isEmpty()) {
+                    for (CategoryMenu childMenu : childMenus) {
+                        childMenu.setParentUid(String.valueOf(newUid)); // 设置父 UID
+                        long newChildUid = snowflakeIdWorker.nextId(); // 生成子菜单的新 UID
+                        childMenu.setUid(String.valueOf(newChildUid)); // 设置子菜单的新 UID
+                        if (childMenu.getChildCategoryMenu() != null && !childMenu.getChildCategoryMenu().isEmpty()) {
+                            for (CategoryMenu childChildMenu : childMenu.getChildCategoryMenu()) {
+                                long newChildChildUid = snowflakeIdWorker.nextId(); // 生成子菜单的新 UID
+                                childChildMenu.setUid(String.valueOf(newChildChildUid)); // 设置子菜单的新 UID
+                                childChildMenu.setParentUid(String.valueOf(newChildUid));
+                            }
+                        }
+                    }
+                }
+                // 处理菜单数据
+                System.out.println("Menu Name: " + menu.getName()+""+menu.getUid());
+                // 其他属性...
+                if (childMenus != null && !childMenus.isEmpty()) {
+                    for (CategoryMenu childMenu : childMenus) {
+                        // 处理子菜单...
+                        System.out.println("Child Menu Name: " + childMenu.getName()+""+childMenu.getUid());
+                        if (childMenu.getChildCategoryMenu() != null && !childMenu.getChildCategoryMenu().isEmpty()) {
+                            for (CategoryMenu childCategoryMenu : childMenu.getChildCategoryMenu()) {
+                                System.out.println(childCategoryMenu.getName()+"    "+childCategoryMenu.getUid());
+                            }
+                        }
+                        // 其他属性...
+                    }
+                }
+            }
+            objectMapper.writeValue(outputFile, menus);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+}

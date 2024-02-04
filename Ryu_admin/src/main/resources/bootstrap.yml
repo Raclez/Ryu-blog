@@ -25,3 +25,8 @@ spring:
         dashboard: ryu.asia:8070
         #默认8719端口,如果被占用会向上扫描。
         port: 8719
+
+logging:
+  level:
+    org.springframework.data.redis.connection.lettuce: DEBUG
+
