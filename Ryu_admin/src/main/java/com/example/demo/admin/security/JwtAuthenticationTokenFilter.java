@@ -2,6 +2,7 @@ package com.example.demo.admin.security;
 
 import com.example.demo.admin.global.RedisConf;
 import com.example.demo.admin.global.SysConf;
+import com.example.demo.base.exception.exceptionType.LoginException;
 import com.example.demo.commons.config.jwt.Audience;
 import com.example.demo.commons.config.jwt.JwtTokenUtil;
 import com.example.demo.commons.entity.OnlineAdmin;
@@ -66,6 +67,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
 
     @Autowired
     private RedisUtil redisUtil;
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)

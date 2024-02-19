@@ -434,12 +434,13 @@ public class AdminServiceImpl extends SuperServiceImpl<AdminMapper, Admin> imple
             String token = redisUtil.get(key);
             if (StringUtils.isNotEmpty(token)) {
                 String online = redisUtil.get(RedisConf.LOGIN_TOKEN_KEY + RedisConf.SEGMENTATION + token);
-                if (StringUtils.isNotEmpty(username) && StringUtils.isNotBlank(online)) {
+                if (StringUtils.isNotBlank(online)) {
                     OnlineAdmin onlineAdmin = JsonUtils.jsonToPojo(online, OnlineAdmin.class);
                     String userName = onlineAdmin.getUserName();
-                    if (StringUtils.equals(userName, username)) {
-                        onlineAdmins.add(RedisConf.LOGIN_TOKEN_KEY + RedisConf.SEGMENTATION + token);
-                        onlineAdmins.add(key);
+
+                    if (StringUtils.equals(org.apache.commons.lang.StringUtils.upperCase(userName),  org.apache.commons.lang.StringUtils.upperCase(username))) {
+                       redisUtil.delete(key);
+                       redisUtil.delete(RedisConf.LOGIN_TOKEN_KEY + RedisConf.SEGMENTATION + token);
                     }
                 }
 
@@ -447,9 +448,7 @@ public class AdminServiceImpl extends SuperServiceImpl<AdminMapper, Admin> imple
 
 
         }
-        if (onlineAdmins.size()>=2) {
-            redisUtil.delete(onlineAdmins);
-        }
+
     }
 
 

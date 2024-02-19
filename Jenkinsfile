@@ -98,18 +98,18 @@ pipeline {
                 }
             }
         }
-        stage('pull镜像到阿里云') {
-            parallel {
-                stage('pull ryu-gateway镜像') {
-                    steps {
-                        sh '''
-           echo "475118582rl" | docker login --username=ryucay registry.cn-hangzhou.aliyuncs.com --password-stdin
- docker tag ryu-gateway:latest registry.cn-hangzhou.aliyuncs.com/ryu_blog/ryu-gateway:latest
- docker push registry.cn-hangzhou.aliyuncs.com/ryu_blog/ryu-gateway:latest
-            '''
-                        echo '运行成功'
-                    }
-                }
+//        stage('pull镜像到阿里云') {
+//            parallel {
+//                stage('pull ryu-gateway镜像') {
+//                    steps {
+//                        sh '''
+//           echo "475118582rl" | docker login --username=ryucay registry.cn-hangzhou.aliyuncs.com --password-stdin
+// docker tag ryu-gateway:latest registry.cn-hangzhou.aliyuncs.com/ryu_blog/ryu-gateway:latest
+// docker push registry.cn-hangzhou.aliyuncs.com/ryu_blog/ryu-gateway:latest
+//            '''
+//                        echo '运行成功'
+//                    }
+//                }
 //                stage('启动admin镜像') {
 //                    steps {
 //                        sh '''
@@ -168,8 +168,8 @@ pipeline {
 //                        echo '运行成功'
 //                    }
 //                }
-            }
-        }
+//            }
+//        }
         stage('运行镜像') {
             parallel {
                 stage('启动gateway镜像') {
