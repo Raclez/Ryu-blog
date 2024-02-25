@@ -109,6 +109,8 @@ public class JwtTokenUtil {
      */
     public Boolean validateToken(String token, UserDetails userDetails, String base64Security) {
         SecurityUser SecurityUser = (SecurityUser) userDetails;
+
+
         final String username = getUsername(token, base64Security);
         final boolean expiration = isExpiration(token, base64Security);
         return (

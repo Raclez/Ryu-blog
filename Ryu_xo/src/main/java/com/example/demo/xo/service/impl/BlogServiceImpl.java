@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -36,7 +37,11 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 博客表 服务实现类
@@ -557,9 +562,10 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
 
     @Override
     public IPage<Blog> getPageList(BlogVO blogVO) {
+
         QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
         // 构建搜索条件
-        if (StringUtils.isNotEmpty(blogVO.getKeyword()) && !StringUtils.isEmpty(blogVO.getKeyword().trim())) {
+        if (org.apache.commons.lang.StringUtils.isNotBlank(blogVO.getKeyword())) {
             queryWrapper.like(SQLConf.TITLE, blogVO.getKeyword().trim());
         }
         if (!StringUtils.isEmpty(blogVO.getTagUid())) {
@@ -585,7 +591,10 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         Page<Blog> page = new Page<>();
         page.setCurrent(blogVO.getCurrentPage());
         page.setSize(blogVO.getPageSize());
-        queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
+        queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE)
+                .select("uid", "oid", "title", "tag_uid", "blog_sort_uid", "click_count",
+                        "file_uid", "author",
+                        "level", "sort", "open_comment", "type", "status", "create_time","is_original","is_publish");
 
         if(StringUtils.isNotEmpty(blogVO.getOrderByAscColumn())) {
             // 将驼峰转换成下划线
@@ -613,87 +622,51 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
             return pageList;
         }
 
-        final StringBuffer fileUids = new StringBuffer();
-        List<String> sortUids = new ArrayList<>();
-        List<String> tagUids = new ArrayList<>();
+        // 异步获取分类、标签、图片信息
+        CompletableFuture<Map<String, BlogSort>> sortFuture = CompletableFuture.supplyAsync(() -> {
+            Set<String> sortUids = list.stream().map(Blog::getBlogSortUid).collect(Collectors.toSet());
+            return blogSortService.listByIds(new ArrayList<>(sortUids)).stream().collect(Collectors.toMap(BlogSort::getUid, Function.identity()));
+        });
 
+        CompletableFuture<Map<String, Tag>> tagFuture = CompletableFuture.supplyAsync(() -> {
+            Set<String> tagUids = list.stream().flatMap(blog -> StringUtils.changeStringToString(blog.getTagUid(), SysConf.FILE_SEGMENTATION).stream()).collect(Collectors.toSet());
+            return tagService.listByIds(new ArrayList<>(tagUids)).stream().collect(Collectors.toMap(Tag::getUid, Function.identity()));
+        });
+
+        CompletableFuture<Map<String, String>> pictureFuture = CompletableFuture.supplyAsync(() -> {
+            Set<String> pictureUids = list.stream().flatMap(blog -> StringUtils.changeStringToString(blog.getFileUid(), SysConf.FILE_SEGMENTATION).stream()).collect(Collectors.toSet());
+            String pictureList = pictureFeignClient.getPicture(String.join(SysConf.FILE_SEGMENTATION, pictureUids), SysConf.FILE_SEGMENTATION);
+            return webUtil.getPictureMap(pictureList).stream().collect(Collectors.toMap(item -> item.get(SQLConf.UID).toString(), item -> item.get(SQLConf.URL).toString()));
+        });
+
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(sortFuture, tagFuture, pictureFuture);
+        try {
+            allOf.get(); // 等待所有异步操作完成
+        } catch (InterruptedException | ExecutionException e) {
+            // 处理异常
+            e.printStackTrace();
+        }
+
+        Map<String, BlogSort> sortMap = sortFuture.join();
+        Map<String, Tag> tagMap = tagFuture.join();
+        Map<String, String> pictureMap = pictureFuture.join();
+
+        // 处理Blog对象
         list.forEach(item -> {
-            if (StringUtils.isNotEmpty(item.getFileUid())) {
-                fileUids.append(item.getFileUid() + SysConf.FILE_SEGMENTATION);
-            }
-            if (StringUtils.isNotEmpty(item.getBlogSortUid())) {
-                sortUids.add(item.getBlogSortUid());
-            }
-            if (StringUtils.isNotEmpty(item.getTagUid())) {
-                List<String> tagUidsTemp = StringUtils.changeStringToString(item.getTagUid(), SysConf.FILE_SEGMENTATION);
-                for (String itemTagUid : tagUidsTemp) {
-                    tagUids.add(itemTagUid);
-                }
-            }
-        });
-        String pictureList = null;
-        if (fileUids != null) {
-            pictureList = this.pictureFeignClient.getPicture(fileUids.toString(), SysConf.FILE_SEGMENTATION);
-        }
+            // 设置分类
+            item.setBlogSort(sortMap.get(item.getBlogSortUid()));
 
-        List<Map<String, Object>> picList = webUtil.getPictureMap(pictureList);
-        Collection<BlogSort> sortList = new ArrayList<>();
-        Collection<Tag> tagList = new ArrayList<>();
+            // 获取标签
+            List<String> tagUidsTemp = StringUtils.changeStringToString(item.getTagUid(), SysConf.FILE_SEGMENTATION);
+            List<Tag> tagListTemp = tagUidsTemp.stream().map(tagMap::get).collect(Collectors.toList());
+            item.setTagList(tagListTemp);
 
-        if (sortUids.size() > 0) {
-            sortList = blogSortService.listByIds(sortUids);
-        }
-        if (tagUids.size() > 0) {
-            tagList = tagService.listByIds(tagUids);
-        }
-
-
-        Map<String, BlogSort> sortMap = new HashMap<>();
-        Map<String, Tag> tagMap = new HashMap<>();
-        Map<String, String> pictureMap = new HashMap<>();
-
-        sortList.forEach(item -> {
-            sortMap.put(item.getUid(), item);
+            // 获取图片
+            List<String> pictureUidsTemp = StringUtils.changeStringToString(item.getFileUid(), SysConf.FILE_SEGMENTATION);
+            List<String> pictureListTemp = pictureUidsTemp.stream().map(pictureMap::get).collect(Collectors.toList());
+            item.setPhotoList(pictureListTemp);
         });
 
-        tagList.forEach(item -> {
-            tagMap.put(item.getUid(), item);
-        });
-
-        picList.forEach(item -> {
-            pictureMap.put(item.get(SQLConf.UID).toString(), item.get(SQLConf.URL).toString());
-        });
-
-
-        for (Blog item : list) {
-
-            //设置分类
-            if (StringUtils.isNotEmpty(item.getBlogSortUid())) {
-                item.setBlogSort(sortMap.get(item.getBlogSortUid()));
-            }
-
-            //获取标签
-            if (StringUtils.isNotEmpty(item.getTagUid())) {
-                List<String> tagUidsTemp = StringUtils.changeStringToString(item.getTagUid(), SysConf.FILE_SEGMENTATION);
-                List<Tag> tagListTemp = new ArrayList<Tag>();
-
-                tagUidsTemp.forEach(tag -> {
-                    tagListTemp.add(tagMap.get(tag));
-                });
-                item.setTagList(tagListTemp);
-            }
-
-            //获取图片
-            if (StringUtils.isNotEmpty(item.getFileUid())) {
-                List<String> pictureUidsTemp = StringUtils.changeStringToString(item.getFileUid(), SysConf.FILE_SEGMENTATION);
-                List<String> pictureListTemp = new ArrayList<>();
-
-                pictureUidsTemp.forEach(picture -> {
-                    pictureListTemp.add(pictureMap.get(picture));
-                });
-                item.setPhotoList(pictureListTemp);
-            }
-        }
         pageList.setRecords(list);
         return pageList;
     }
@@ -1721,6 +1694,11 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         //将从数据库查询的数据缓存到redis中
         redisUtil.set(SysConf.MONTH_SET, JsonUtils.objectToJson(monthSet));
         return ResultUtil.successWithData(map.get(monthDate));
+    }
+
+    @Override
+    public Blog getBlogById(String id) {
+      return   blogMapper.selectById(id);
     }
 
     /**
