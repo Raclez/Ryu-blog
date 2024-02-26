@@ -100,49 +100,28 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
 
     @Override
     public List<Blog> setTagAndSortByBlogList(List<Blog> list) {
-        List<String> sortUids = new ArrayList<>();
-        List<String> tagUids = new ArrayList<>();
-        list.forEach(item -> {
-            if (StringUtils.isNotEmpty(item.getBlogSortUid())) {
-                sortUids.add(item.getBlogSortUid());
-            }
-            if (StringUtils.isNotEmpty(item.getTagUid())) {
-                List<String> tagUidsTemp = StringUtils.changeStringToString(item.getTagUid(), BaseSysConf.FILE_SEGMENTATION);
-                for (String itemTagUid : tagUidsTemp) {
-                    tagUids.add(itemTagUid);
-                }
-            }
-        });
-        Collection<BlogSort> sortList = new ArrayList<>();
-        Collection<Tag> tagList = new ArrayList<>();
-        if (sortUids.size() > 0) {
-            sortList = blogSortMapper.selectBatchIds(sortUids);
-        }
-        if (tagUids.size() > 0) {
-            tagList = tagMapper.selectBatchIds(tagUids);
-        }
-        Map<String, BlogSort> sortMap = new HashMap<>();
-        Map<String, Tag> tagMap = new HashMap<>();
-        sortList.forEach(item -> {
-            sortMap.put(item.getUid(), item);
-        });
-        tagList.forEach(item -> {
-            tagMap.put(item.getUid(), item);
-        });
-        for (Blog item : list) {
+        Map<String, Tag> tagMap=null;
+        Set<String> tagIds = list.stream()
+                .filter(blog -> StringUtils.isNotEmpty(blog.getTagUid()))
+                .map(blog -> Arrays.asList(org.apache.commons.lang.StringUtils.split(blog.getTagUid(), BaseSysConf.FILE_SEGMENTATION)))
+                .flatMap(List::stream)
+                .collect(Collectors.toSet());
 
+        BlogSort blogSort = blogSortMapper.selectById(list.get(0).getBlogSortUid());
+        if(tagIds.size()> 0){
+                tagMap = tagMapper.selectBatchIds(tagIds).stream().collect(Collectors.toMap(Tag::getUid, item -> item));
+        }
+        for (Blog item : list) {
             //设置分类
-            if (StringUtils.isNotEmpty(item.getBlogSortUid())) {
-                item.setBlogSort(sortMap.get(item.getBlogSortUid()));
-            }
+                item.setBlogSort(blogSort);
             //获取标签
             if (StringUtils.isNotEmpty(item.getTagUid())) {
-                List<String> tagUidsTemp = StringUtils.changeStringToString(item.getTagUid(), BaseSysConf.FILE_SEGMENTATION);
-                List<Tag> tagListTemp = new ArrayList<Tag>();
-                tagUidsTemp.forEach(tag -> {
-                    tagListTemp.add(tagMap.get(tag));
-                });
-                item.setTagList(tagListTemp);
+                List<Tag> tags = Arrays.stream(org.apache.commons.lang.StringUtils.split(item.getTagUid(), BaseSysConf.FILE_SEGMENTATION))
+                        .map(tagMap::get)
+                        .filter(tag -> tag != null)
+                        .collect(Collectors.toList());
+
+                item.setTagList(tags);
             }
         }
 
@@ -522,27 +501,18 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         Blog blog = blogService.getById(blogUid);
         QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-        Page<Blog> page = new Page<>();
-        page.setCurrent(1);
-        page.setSize(10);
+
         // 通过分类来获取相关博客
         String blogSortUid = blog.getBlogSortUid();
         queryWrapper.eq(SQLConf.BLOG_SORT_UID, blogSortUid);
         queryWrapper.eq(SQLConf.IS_PUBLISH, EPublish.PUBLISH);
         queryWrapper.orderByDesc(SQLConf.CREATE_TIME);
-        IPage<Blog> pageList = blogService.page(page, queryWrapper);
-        List<Blog> list = pageList.getRecords();
-        list = blogService.setTagAndSortByBlogList(list);
+        List<Blog> blogs = blogMapper.selectList(queryWrapper);
+        blogs = blogService.setTagAndSortByBlogList(blogs);
 
         //过滤掉当前的博客
-        List<Blog> newList = new ArrayList<>();
-        for (Blog item : list) {
-            if (item.getUid().equals(blogUid)) {
-                continue;
-            }
-            newList.add(item);
-        }
-        return newList;
+        List<Blog> list = blogs.stream().filter(item -> !item.getUid().equals(blogUid)).collect(Collectors.toList());
+        return list;
     }
 
     @Override
@@ -1217,10 +1187,6 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
     @Override
     public IPage<Blog> getNewBlog(Long currentPage, Long pageSize) {
 
-        String blogNewCount = sysParamsService.getSysParamsValueByKey(SysConf.BLOG_NEW_COUNT);
-        if (StringUtils.isEmpty(blogNewCount)) {
-            log.error(MessageConf.PLEASE_CONFIGURE_SYSTEM_PARAMS);
-        }
 
 //        // 判断Redis中是否缓存了第一页的内容
 //        if (currentPage == 1L) {
@@ -1236,7 +1202,7 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
         Page<Blog> page = new Page<>();
         page.setCurrent(currentPage);
-        page.setSize(Long.valueOf(blogNewCount));
+        page.setSize(pageSize);
         queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
         queryWrapper.eq(BaseSQLConf.IS_PUBLISH, EPublish.PUBLISH);
         queryWrapper.orderByDesc(SQLConf.CREATE_TIME);
@@ -1789,7 +1755,7 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
      * @return
      */
     private List<Blog> setBlog(List<Blog> list) {
-        final StringBuffer fileUids = new StringBuffer();
+        final StringBuilder fileUids = new StringBuilder();
         List<String> sortUids = new ArrayList<>();
         List<String> tagUids = new ArrayList<>();
 
@@ -1804,37 +1770,18 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
                 tagUids.add(item.getTagUid());
             }
         });
-        String pictureList = null;
+        String pictureList = Optional.ofNullable(fileUids.toString())
+                .map(u -> this.pictureFeignClient.getPicture(u, SysConf.FILE_SEGMENTATION))
+                .orElse(null);
 
-        if (fileUids != null) {
-            pictureList = this.pictureFeignClient.getPicture(fileUids.toString(), SysConf.FILE_SEGMENTATION);
-        }
         List<Map<String, Object>> picList = webUtil.getPictureMap(pictureList);
-        Collection<BlogSort> sortList = new ArrayList<>();
-        Collection<Tag> tagList = new ArrayList<>();
-        if (sortUids.size() > 0) {
-            sortList = blogSortService.listByIds(sortUids);
-        }
-        if (tagUids.size() > 0) {
-            tagList = tagService.listByIds(tagUids);
-        }
-
-        Map<String, BlogSort> sortMap = new HashMap<>();
-        Map<String, Tag> tagMap = new HashMap<>();
-        Map<String, String> pictureMap = new HashMap<>();
-
-        sortList.forEach(item -> {
-            sortMap.put(item.getUid(), item);
-        });
-
-        tagList.forEach(item -> {
-            tagMap.put(item.getUid(), item);
-        });
-
-        picList.forEach(item -> {
-            pictureMap.put(item.get(SQLConf.UID).toString(), item.get(SQLConf.URL).toString());
-        });
-
+        Map<String, BlogSort> sortMap = blogSortService.listByIds(sortUids).stream()
+                .collect(Collectors.toMap(BlogSort::getUid, Function.identity()));
+        Map<String, Tag> tagMap = tagService.listByIds(tagUids).stream()
+                .collect(Collectors.toMap(Tag::getUid, Function.identity()));
+        Map<String, String> pictureMap = picList.stream()
+                .collect(Collectors.toMap(item -> item.get(SQLConf.UID).toString(),
+                        item -> item.get(SQLConf.URL).toString()));
 
         for (Blog item : list) {
 
@@ -1845,25 +1792,18 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
 
             //获取标签
             if (StringUtils.isNotEmpty(item.getTagUid())) {
-                List<String> tagUidsTemp = StringUtils.changeStringToString(item.getTagUid(), SysConf.FILE_SEGMENTATION);
-                List<Tag> tagListTemp = new ArrayList<Tag>();
-
-                tagUidsTemp.forEach(tag -> {
-                    if (tagMap.get(tag) != null) {
-                        tagListTemp.add(tagMap.get(tag));
-                    }
-                });
-                item.setTagList(tagListTemp);
+                List<Tag> tagList = Arrays.stream(org.apache.commons.lang.StringUtils.split(item.getTagUid(), SysConf.FILE_SEGMENTATION))
+                  .map(tagMap::get)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+                item.setTagList(tagList);
             }
 
             //获取图片
             if (StringUtils.isNotEmpty(item.getFileUid())) {
-                List<String> pictureUidsTemp = StringUtils.changeStringToString(item.getFileUid(), SysConf.FILE_SEGMENTATION);
-                List<String> pictureListTemp = new ArrayList<>();
-
-                pictureUidsTemp.forEach(picture -> {
-                    pictureListTemp.add(pictureMap.get(picture));
-                });
+                List<String> pictureListTemp = Arrays.stream(org.apache.commons.lang.StringUtils.split(item.getFileUid(), SysConf.FILE_SEGMENTATION))
+                        .map(pictureMap::get).filter(Objects::nonNull)
+                        .collect(Collectors.toList());
                 item.setPhotoList(pictureListTemp);
             }
         }

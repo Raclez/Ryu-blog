@@ -82,7 +82,7 @@ public class IndexRestApi {
                              @ApiParam(name = "pageSize", value = "每页显示数目", required = false) @RequestParam(name = "pageSize", required = false, defaultValue = "10") Long pageSize) {
 
         log.info("获取首页最新的博客");
-        return ResultUtil.result(SysConf.SUCCESS, blogService.getNewBlog(currentPage, null));
+        return ResultUtil.result(SysConf.SUCCESS, blogService.getNewBlog(currentPage, pageSize));
     }
 
     @ApiOperation(value = "Ryu-search调用获取博客的接口[包含内容]", notes = "Ryu-search调用获取博客的接口")

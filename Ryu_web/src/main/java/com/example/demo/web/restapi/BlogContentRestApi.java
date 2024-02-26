@@ -72,7 +72,7 @@ public class BlogContentRestApi {
 
         HttpServletRequest request = RequestHolder.getRequest();
         String ip = IpUtils.getIpAddr(request);
-        if (StringUtils.isEmpty(uid) && oid == 0) {
+        if (StringUtils.isEmpty(uid) && oid <= 0) {
             return ResultUtil.result(SysConf.ERROR, MessageConf.PARAM_INCORRECT);
         }
         Blog blog = null;
@@ -81,7 +81,6 @@ public class BlogContentRestApi {
         } else {
             QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq(SysConf.OID, oid);
-            queryWrapper.last(SysConf.LIMIT_ONE);
             blog = blogService.getOne(queryWrapper);
         }
 
