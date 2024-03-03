@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ryu-resource
+  namespace: blog
+spec:
+  replicas: 1  # 期望的副本数
+  selector:
+    matchLabels:
+      app: ryu-resource
+  template:
+    metadata:
+      labels:
+        app: ryu-resource
+    spec:
+      containers:
+        - name: ryu-resource
+          image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-resource:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
+          ports:
+            - containerPort: 8602  # 应用程序监听的端口
+      imagePullSecrets:
+        - name: aliyun-docker
