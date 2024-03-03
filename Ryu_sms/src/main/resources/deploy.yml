@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ryu-sms
+  namespace: blog
+spec:
+  replicas: 1  # 期望的副本数
+  selector:
+    matchLabels:
+      app: ryu-sms
+  template:
+    metadata:
+      labels:
+        app: ryu-sms
+    spec:
+      imagesPullSecrets:
+        - name: aliyun-docker
+      containers:
+        - name: ryu-sms
+          image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-sms:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
+          ports:
+            - containerPort: 8604  # 应用程序监听的端口
