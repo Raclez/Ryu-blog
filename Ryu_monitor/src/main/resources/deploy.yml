@@ -20,7 +20,7 @@ spec:
       labels:
         app: ryu-monitor
     spec:
-      imagesPullSecrets:
+      imagePullSecrets:
         - name: aliyun-docker
       containers:
         - name: ryu-monitor

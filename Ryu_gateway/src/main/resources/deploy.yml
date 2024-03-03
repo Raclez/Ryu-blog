@@ -20,7 +20,7 @@ spec:
       labels:
         app: ryu-gateway
     spec:
-      imagesPullSecrets:
+      imagePullSecrets:
         - name: aliyun-docker
       containers:
         - name: ryu-gateway

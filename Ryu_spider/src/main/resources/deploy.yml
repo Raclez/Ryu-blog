@@ -20,7 +20,7 @@ spec:
       labels:
         app: ryu-spider
     spec:
-      imagesPullSecrets:
+      imagePullSecrets:
         - name: aliyun-docker
       containers:
         - name: ryu-spider
