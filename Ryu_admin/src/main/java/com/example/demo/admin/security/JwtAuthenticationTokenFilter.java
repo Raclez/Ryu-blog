@@ -83,7 +83,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
         }
 
         //请求头 'Authorization': tokenHead + token
-        if (authHeader != null && authHeader.startsWith(tokenHead)) {
+        if (!org.apache.commons.lang.StringUtils.isEmpty(authHeader) && authHeader.startsWith(tokenHead)) {
 
             log.error("传递过来的token为: {}", authHeader);
 
@@ -145,6 +145,8 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 // 通过用户名加载SpringSecurity用户
+                String s = redisUtil.get(RedisConf.LOGIN_TOKEN_KEY + Constants.SYMBOL_COLON + token);
+                OnlineAdmin OnlineAdmin = (com.example.demo.commons.entity.OnlineAdmin) JsonUtils.jsonToObject(s, OnlineAdmin.class);
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
                 // 校验Token的有效性
                 if (jwtTokenUtil.validateToken(token, userDetails, base64Secret)) {
@@ -161,5 +163,5 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
 
     }
 }
-		
+
 

@@ -1,5 +1,6 @@
 package com.example.demo.xo.service.impl;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -26,6 +27,8 @@ import com.example.demo.base.serviceImpl.SuperServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
@@ -88,6 +91,8 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
     @Override
     public List<Blog> setTagByBlogList(List<Blog> list) {
         for (Blog item : list) {
@@ -532,7 +537,17 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
 
     @Override
     public IPage<Blog> getPageList(BlogVO blogVO) {
-
+        Page<Blog> page = new Page<>();
+        Long currentPage = blogVO.getCurrentPage();
+        Long size = blogVO.getPageSize();
+        page.setCurrent(currentPage);
+        page.setSize(size);
+        String BlogKey=SysConf.BLOG+BaseSysConf.REDIS_SEGMENTATION+"LIST";
+        if(stringRedisTemplate.hasKey(BlogKey)&&stringRedisTemplate.opsForList().size(BlogKey)>= size * (currentPage)-1){
+            List<Blog> list = stringRedisTemplate.opsForList().range(BlogKey, size, size * currentPage-1).stream().map(item -> JSON.parseObject(item, Blog.class)).collect(Collectors.toList());
+            page.setRecords(list);
+            return page;
+        }
         QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
         // 构建搜索条件
         if (org.apache.commons.lang.StringUtils.isNotBlank(blogVO.getKeyword())) {
@@ -558,9 +573,7 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         }
 
         //分页
-        Page<Blog> page = new Page<>();
-        page.setCurrent(blogVO.getCurrentPage());
-        page.setSize(blogVO.getPageSize());
+
         queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE)
                 .select("uid", "oid", "title", "tag_uid", "blog_sort_uid", "click_count",
                         "file_uid", "author",
@@ -588,55 +601,52 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         IPage<Blog> pageList = blogService.page(page, queryWrapper);
         List<Blog> list = pageList.getRecords();
 
-        if (list.size() == 0) {
+        if (list.isEmpty()) {
             return pageList;
         }
 
+
         // 异步获取分类、标签、图片信息
-        CompletableFuture<Map<String, BlogSort>> sortFuture = CompletableFuture.supplyAsync(() -> {
-            Set<String> sortUids = list.stream().map(Blog::getBlogSortUid).collect(Collectors.toSet());
-            return blogSortService.listByIds(new ArrayList<>(sortUids)).stream().collect(Collectors.toMap(BlogSort::getUid, Function.identity()));
-        });
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(
+                CompletableFuture.runAsync(() -> {
+                    // 获取分类
+                    Set<String> sortUids = list.stream().map(Blog::getBlogSortUid).collect(Collectors.toSet());
+                    Map<String, BlogSort> sortMap = blogSortService.listByIds(new ArrayList<>(sortUids)).stream()
+                            .collect(Collectors.toMap(BlogSort::getUid, Function.identity()));
+                    list.forEach(blog -> blog.setBlogSort(sortMap.get(blog.getBlogSortUid())));
+                }),
 
-        CompletableFuture<Map<String, Tag>> tagFuture = CompletableFuture.supplyAsync(() -> {
-            Set<String> tagUids = list.stream().flatMap(blog -> StringUtils.changeStringToString(blog.getTagUid(), SysConf.FILE_SEGMENTATION).stream()).collect(Collectors.toSet());
-            return tagService.listByIds(new ArrayList<>(tagUids)).stream().collect(Collectors.toMap(Tag::getUid, Function.identity()));
-        });
+                CompletableFuture.runAsync(() -> {
+                    // 获取标签
+                    Set<String> tagUids = list.stream().flatMap(blog -> Arrays.stream(org.apache.commons.lang.StringUtils.split(blog.getTagUid(), SysConf.FILE_SEGMENTATION))).collect(Collectors.toSet());
+                    Map<String, Tag> tagMap = tagService.listByIds(new ArrayList<>(tagUids)).stream()
+                            .collect(Collectors.toMap(Tag::getUid, Function.identity()));
+                    list.forEach(blog -> {
+                        List<Tag> tagList = Arrays.stream(org.apache.commons.lang.StringUtils.split(blog.getTagUid(), SysConf.FILE_SEGMENTATION))
+                                .map(tagMap::get)
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toList());
+                        blog.setTagList(tagList);
+                    });
+                })
 
-        CompletableFuture<Map<String, String>> pictureFuture = CompletableFuture.supplyAsync(() -> {
-            Set<String> pictureUids = list.stream().flatMap(blog -> StringUtils.changeStringToString(blog.getFileUid(), SysConf.FILE_SEGMENTATION).stream()).collect(Collectors.toSet());
-            String pictureList = pictureFeignClient.getPicture(String.join(SysConf.FILE_SEGMENTATION, pictureUids), SysConf.FILE_SEGMENTATION);
-            return webUtil.getPictureMap(pictureList).stream().collect(Collectors.toMap(item -> item.get(SQLConf.UID).toString(), item -> item.get(SQLConf.URL).toString()));
-        });
+//                CompletableFuture.runAsync(() -> {
+//                    // 获取图片
+//                    Set<String> pictureUids = list.stream().flatMap(blog -> Arrays.stream(org.apache.commons.lang.StringUtils.split(blog.getFileUid(), SysConf.FILE_SEGMENTATION))).collect(Collectors.toSet());
+//                    String pictureList = pictureFeignClient.getPicture(String.join(SysConf.FILE_SEGMENTATION, pictureUids), SysConf.FILE_SEGMENTATION);
+//                    Map<String, String> pictureMap = webUtil.getPictureMap(pictureList).stream()
+//                            .collect(Collectors.toMap(item -> item.get(SQLConf.UID).toString(), item -> item.get(SQLConf.URL).toString()));
+//                    list.forEach(blog -> {
+//                        List<String> pictureListTemp = Arrays.stream(org.apache.commons.lang.StringUtils.split(blog.getFileUid(), SysConf.FILE_SEGMENTATION))
+//                                .map(pictureMap::get)
+//                                .collect(Collectors.toList());
+//                        blog.setPhotoList(pictureListTemp);
+//                    });
+//                })
+        );
 
-        CompletableFuture<Void> allOf = CompletableFuture.allOf(sortFuture, tagFuture, pictureFuture);
-        try {
-            allOf.get(); // 等待所有异步操作完成
-        } catch (InterruptedException | ExecutionException e) {
-            // 处理异常
-            e.printStackTrace();
-        }
-
-        Map<String, BlogSort> sortMap = sortFuture.join();
-        Map<String, Tag> tagMap = tagFuture.join();
-        Map<String, String> pictureMap = pictureFuture.join();
-
-        // 处理Blog对象
-        list.forEach(item -> {
-            // 设置分类
-            item.setBlogSort(sortMap.get(item.getBlogSortUid()));
-
-            // 获取标签
-            List<String> tagUidsTemp = StringUtils.changeStringToString(item.getTagUid(), SysConf.FILE_SEGMENTATION);
-            List<Tag> tagListTemp = tagUidsTemp.stream().map(tagMap::get).collect(Collectors.toList());
-            item.setTagList(tagListTemp);
-
-            // 获取图片
-            List<String> pictureUidsTemp = StringUtils.changeStringToString(item.getFileUid(), SysConf.FILE_SEGMENTATION);
-            List<String> pictureListTemp = pictureUidsTemp.stream().map(pictureMap::get).collect(Collectors.toList());
-            item.setPhotoList(pictureListTemp);
-        });
-
+        allOf.join();
+        list.stream().forEach(blog ->  stringRedisTemplate.opsForList().rightPush(BlogKey, JsonUtils.objectToJson(blog)));
         pageList.setRecords(list);
         return pageList;
     }

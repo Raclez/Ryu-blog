@@ -7,7 +7,10 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.example.demo.base.entity.SuperEntity;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -21,7 +24,7 @@ import java.util.List;
  */
 @Data
 @TableName("t_admin")
-public class Admin extends SuperEntity<Admin> {
+public class Admin extends SuperEntity<Admin>   {
 
     private static final long serialVersionUID = 1L;
 
@@ -177,5 +180,6 @@ public class Admin extends SuperEntity<Admin> {
      */
     @TableField(exist = false)
     private String tokenUid;
+
 
 }

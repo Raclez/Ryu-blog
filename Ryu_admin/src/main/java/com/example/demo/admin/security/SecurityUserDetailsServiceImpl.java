@@ -41,7 +41,6 @@ public class SecurityUserDetailsServiceImpl implements UserDetailsService {
 
         QueryWrapper<Admin> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq(SQLConf.USER_NAME, username);
-        queryWrapper.last(SysConf.LIMIT_ONE);
         Admin admin = adminService.getOne(queryWrapper);
         if (admin == null) {
             throw new UsernameNotFoundException(String.format("No user found with username '%s'.", username));

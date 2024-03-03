@@ -16,6 +16,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import javax.annotation.Resource;
+
 /**
  * SpringSecurity配置文件
  * 用于配置哪些请求被拦截，哪些请求可以匿名访问
@@ -28,10 +30,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableGlobalMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Autowired
+    @Resource
     private JwtAuthenticationEntryPoint unauthorizedHandler;
 
-    @Autowired
+      @Resource
     private UserDetailsService userDetailsService;
 
     @Autowired
@@ -114,6 +116,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 ).permitAll()
                 // 除上面外的所有请求全部需要鉴权认证
                 .anyRequest().authenticated();
+//        httpSecurity.addFilter(new LoginFilter(authenticationManagerBean()));
 
         // 添加两个过滤器
         // JwtAuthenticationTokenFilter: JWT认证过滤器,验证token有效性
