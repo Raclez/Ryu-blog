@@ -12,7 +12,7 @@ spec:
       app: ryu-resource
   strategy:
     rollingUpdate:
-      maxsurge: 50%
+      maxSurge: 50%
       maxUnavailable: 50%
       type: RollingUpdate
   template:
@@ -37,11 +37,11 @@ metadata:
   namespace: blog
 spec:
   ports:
-    -name: http
-    port: 8602
-    protocol: TCP
-    targetPort: 8602
+    - name: http
+      port: 8602
+      protocol: TCP
+      targetPort: 8602
   selector:
     app: ryu-resource
-    sessionAffinity: None
-    type: ClusterIP
+  sessionAffinity: None
+  type: ClusterIP

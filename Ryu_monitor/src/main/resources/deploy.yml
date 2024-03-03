@@ -2,14 +2,14 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: ryu-admin
-  name: ryu-admin
+    app: ryu-monitor
+  name: ryu-monitor
   namespace: blog
 spec:
   replicas: 1  # 期望的副本数
   selector:
     matchLabels:
-      app: ryu-admin
+      app: ryu-monitor
   strategy:
     rollingUpdate:
       maxSurge: 50%
@@ -18,30 +18,30 @@ spec:
   template:
     metadata:
       labels:
-        app: ryu-admin
+        app: ryu-monitor
     spec:
       imagesPullSecrets:
         - name: aliyun-docker
       containers:
-        - name: ryu-admin
-          image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-admin:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
+        - name: ryu-monitor
+          image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-monitor:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
           ports:
-            - containerPort: 8601  # 应用程序监听的端口
+            - containerPort: 8606  # 应用程序监听的端口
 ---
 apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: ryu-admin
-  name: ryu-admin
+    app: ryu-monitor
+  name: ryu-monitor
   namespace: blog
 spec:
   ports:
     - name: http
-      port: 8601
+      port: 8606
       protocol: TCP
-      targetPort: 8601
+      targetPort: 8606
   selector:
-    app: ryu-admin
+    app: ryu-monitor
   sessionAffinity: None
   type: ClusterIP

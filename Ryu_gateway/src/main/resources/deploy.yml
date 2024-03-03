@@ -12,7 +12,7 @@ spec:
       app: ryu-gateway
   strategy:
     rollingUpdate:
-      maxsurge: 50%
+      maxSurge: 50%
       maxUnavailable: 50%
       type: RollingUpdate
   template:
@@ -37,11 +37,11 @@ metadata:
   namespace: blog
 spec:
   ports:
-    -name: http
-    port: 8607
-    protocol: TCP
-    targetPort: 8607
+    - name: http
+      port: 8607
+      protocol: TCP
+      targetPort: 8607
   selector:
     app: ryu-gateway
-    sessionAffinity: None
-    type: ClusterIP
+  sessionAffinity: None
+  type: ClusterIP

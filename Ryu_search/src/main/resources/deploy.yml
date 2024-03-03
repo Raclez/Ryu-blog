@@ -12,7 +12,7 @@ spec:
       app: ryu-search
   strategy:
     rollingUpdate:
-      maxsurge: 50%
+      maxSurge: 50%
       maxUnavailable: 50%
       type: RollingUpdate
   template:
@@ -37,11 +37,11 @@ metadata:
   namespace: blog
 spec:
   ports:
-    -name: http
-    port: 8605
-    protocol: TCP
-    targetPort: 8605
+    - name: http
+      port: 8605
+      protocol: TCP
+      targetPort: 8605
   selector:
     app: ryu-search
-    sessionAffinity: None
-    type: ClusterIP
+  sessionAffinity: None
+  type: ClusterIP
