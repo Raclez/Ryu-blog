@@ -13,10 +13,10 @@ spec:
       labels:
         app: ryu-gateway
     spec:
-      imagesPullSecrets:
-        - name: aliyun-docker
       containers:
         - name: ryu-gateway
           image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-gateway:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
           ports:
             - containerPort: 8607  # 应用程序监听的端口
+      imagePullSecrets:
+        - name: aliyun-docker
