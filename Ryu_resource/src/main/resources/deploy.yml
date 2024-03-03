@@ -1,6 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  labels:
+    app: ryu-resource
   name: ryu-resource
   namespace: blog
 spec:
@@ -8,15 +10,38 @@ spec:
   selector:
     matchLabels:
       app: ryu-resource
+  strategy:
+    rollingUpdate:
+      maxsurge: 50%
+      maxUnavailable: 50%
+      type: RollingUpdate
   template:
     metadata:
       labels:
         app: ryu-resource
     spec:
+      imagesPullSecrets:
+        - name: aliyun-docker
       containers:
         - name: ryu-resource
           image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-resource:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
           ports:
             - containerPort: 8602  # 应用程序监听的端口
-      imagePullSecrets:
-        - name: aliyun-docker
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ryu-resource
+  name: ryu-resource
+  namespace: blog
+spec:
+  ports:
+    -name: http
+    port: 8602
+    protocol: TCP
+    targetPort: 8602
+  selector:
+    app: ryu-resource
+    sessionAffinity: None
+    type: ClusterIP
