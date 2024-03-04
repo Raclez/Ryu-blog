@@ -23,6 +23,9 @@ spec:
       containers:
         - name: ryu-admin
           image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-admin:SNAPSHOT-$BUILD_NUMBER
+          env:
+            - name: PARAMS
+              value: "--spring.profiles.active=prod --spring.cloud.nacos.config.server-addr=naocs-6fie.blog:8848 --spring.cloud.nacos.discovery.server-addr=naocs-6fie.blog:8848"
           ports:
             - containerPort: 8601
       imagePullSecrets:
