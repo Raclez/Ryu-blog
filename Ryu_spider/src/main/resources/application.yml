@@ -1,59 +1,11 @@
 spring:
   profiles:
-    active: dev
+    active: prod
 
 threadpool:
   corePoolSize: 4
   maxPoolSize: 8
 
 
-#  datasource:
-#    type: com.alibaba.druid.pool.DruidDataSource
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-#    url: jdbc:mysql://ryu.asia:3306/Ryu_blog?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&useSSL=false&serverTimezone=Asia/Shanghai
-#
-#  shardingsphere:
-#    datasource:
-#      names: master, slave1, slave2
-#      master:
-#        type: com.alibaba.druid.pool.DruidDataSource
-#        driver-class-name: com.mysql.cj.jdbc.Driver
-#        url: jdbc:mysql://ryu.asia:3306/Ryu_blog?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&useSSL=false&serverTimezone=Asia/Shanghai
-#        username: root
-#        password: 123456
-#
-#      slave1:
-#        type: com.alibaba.druid.pool.DruidDataSource
-#        driver-class-name: com.mysql.cj.jdbc.Driver
-#        url: jdbc:mysql://ryu.asia:3307/Ryu_blog?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&useSSL=false&serverTimezone=Asia/Shanghai
-#        username: root
-#        password: 123456
-#
-#      slave2:
-#        type: com.alibaba.druid.pool.DruidDataSource
-#        driver-class-name: com.mysql.cj.jdbc.Driver
-#        url: jdbc:mysql://ryu.asia:3308/Ryu_blog?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&useSSL=false&serverTimezone=Asia/Shanghai
-#        username: root
-#        password: 123456
-#
-##    sharding:
-##      tables:
-##        your_table_name:
-##          actual-data-nodes: master.your_table_name, slave1.your_table_name, slave2.your_table_name
-##          # 其他表配置
-##
-##      binding-tables: your_table_name
-##      default-database-strategy: standard
-##      # 其他Sharding配置
-#
-#    master-slave-rules:
-#      your_rule_name:
-#        name: round_robin
-#        master-data-source-name: master
-#        slave-data-source-names: slave1, slave2
-#        load-balancer-name: round-robin
-#        slave-algorithm-class-name: your.algorithm.class.name
-
-# 其他应用程序配置
 
 

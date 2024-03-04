@@ -25,9 +25,7 @@ spec:
       containers:
         - name: ryu-monitor
           image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-monitor:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
-          envFrom:
-          - configMapRef:
-              name: config-map
+          
           ports:
             - containerPort: 8606  # 应用程序监听的端口
 ---

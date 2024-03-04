@@ -25,9 +25,7 @@ spec:
       containers:
         - name: ryu-spider
           image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-spider:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
-          envFrom:
-          - configMapRef:
-              name: your-config-map
+         
           ports:
             - containerPort: 8608  # 应用程序监听的端口
 ---

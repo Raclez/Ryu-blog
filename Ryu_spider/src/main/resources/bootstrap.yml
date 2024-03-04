@@ -8,12 +8,12 @@ spring:
       username: nacos
       password: nacos
       discovery:
-        server-addr: ryu.asia:8848
-        namespace: dev
+        server-addr: naocs-6fie.blog:8848
+        namespace: prod
       config:
-        server-addr: ryu.asia:8848
+        server-addr: naocs-6fie.blog:8848
         file-extension: yaml
         #指定分组
-        group: dev
+        group: prod
         #指定命名空间
-        namespace: dev
+        namespace: prod
