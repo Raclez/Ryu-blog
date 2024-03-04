@@ -628,21 +628,21 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
                                 .collect(Collectors.toList());
                         blog.setTagList(tagList);
                     });
-                })
+                }),
 
-//                CompletableFuture.runAsync(() -> {
-//                    // 获取图片
-//                    Set<String> pictureUids = list.stream().flatMap(blog -> Arrays.stream(org.apache.commons.lang.StringUtils.split(blog.getFileUid(), SysConf.FILE_SEGMENTATION))).collect(Collectors.toSet());
-//                    String pictureList = pictureFeignClient.getPicture(String.join(SysConf.FILE_SEGMENTATION, pictureUids), SysConf.FILE_SEGMENTATION);
-//                    Map<String, String> pictureMap = webUtil.getPictureMap(pictureList).stream()
-//                            .collect(Collectors.toMap(item -> item.get(SQLConf.UID).toString(), item -> item.get(SQLConf.URL).toString()));
-//                    list.forEach(blog -> {
-//                        List<String> pictureListTemp = Arrays.stream(org.apache.commons.lang.StringUtils.split(blog.getFileUid(), SysConf.FILE_SEGMENTATION))
-//                                .map(pictureMap::get)
-//                                .collect(Collectors.toList());
-//                        blog.setPhotoList(pictureListTemp);
-//                    });
-//                })
+                CompletableFuture.runAsync(() -> {
+                    // 获取图片
+                    Set<String> pictureUids = list.stream().flatMap(blog -> Arrays.stream(org.apache.commons.lang.StringUtils.split(blog.getFileUid(), SysConf.FILE_SEGMENTATION))).collect(Collectors.toSet());
+                    String pictureList = pictureFeignClient.getPicture(String.join(SysConf.FILE_SEGMENTATION, pictureUids), SysConf.FILE_SEGMENTATION);
+                    Map<String, String> pictureMap = webUtil.getPictureMap(pictureList).stream()
+                            .collect(Collectors.toMap(item -> item.get(SQLConf.UID).toString(), item -> item.get(SQLConf.URL).toString()));
+                    list.forEach(blog -> {
+                        List<String> pictureListTemp = Arrays.stream(org.apache.commons.lang.StringUtils.split(blog.getFileUid(), SysConf.FILE_SEGMENTATION))
+                                .map(pictureMap::get)
+                                .collect(Collectors.toList());
+                        blog.setPhotoList(pictureListTemp);
+                    });
+                })
         );
 
         allOf.join();

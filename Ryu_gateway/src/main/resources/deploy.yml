@@ -42,7 +42,8 @@ spec:
       port: 8607
       protocol: TCP
       targetPort: 8607
+      nodePort: 32657
   selector:
     app: ryu-gateway
   sessionAffinity: None
-  type: ClusterIP
+  type: NodePort
