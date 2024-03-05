@@ -543,8 +543,8 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         page.setCurrent(currentPage);
         page.setSize(size);
         String BlogKey=SysConf.BLOG+BaseSysConf.REDIS_SEGMENTATION+"LIST";
-        if(stringRedisTemplate.hasKey(BlogKey)&&stringRedisTemplate.opsForList().size(BlogKey)>= size * (currentPage)-1){
-            List<Blog> list = stringRedisTemplate.opsForList().range(BlogKey, size, size * currentPage-1).stream().map(item -> JSON.parseObject(item, Blog.class)).collect(Collectors.toList());
+        if(stringRedisTemplate.hasKey(BlogKey)&&stringRedisTemplate.opsForList().size(BlogKey)>= size * (currentPage)){
+            List<Blog> list = stringRedisTemplate.opsForList().range(BlogKey, size*(currentPage-1), size * currentPage-1).stream().map(item -> JSON.parseObject(item, Blog.class)).collect(Collectors.toList());
             page.setRecords(list);
             return page;
         }
