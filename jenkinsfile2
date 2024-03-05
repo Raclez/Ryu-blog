@@ -1,0 +1,313 @@
+pipeline {
+  agent {
+    node {
+      label 'maven'
+    }
+
+  }
+  stages {
+    stage('clone code') {
+      agent none
+      steps {
+        container('base') {
+                  git(url: 'https://gitee.com/Ryucal/Ryu-blog.git', credentialsId: 'gitee-id', branch: 'master', changelog: true, poll: false)
+        }
+
+      }
+    }
+
+    stage('unit test') {
+      steps {
+        container('maven') {
+          sh 'mvn clean package -Dmaven.test.skip=true'
+        }
+
+      }
+    }
+
+    stage('把jar包构建为docker镜像') {
+      parallel {
+        stage('构建gateway镜像') {
+          agent none
+          steps {
+            container('maven') {
+              sh '''cd Ryu_gateway/target
+            docker build -t ryu-gateway:latest -f ../src/main/resources/Dockerfile .'''
+              echo '运行成功'
+            }
+
+          }
+        }
+
+        stage('构建admin镜像') {
+          steps {
+            container('maven') {
+              sh '''cd Ryu_admin/target
+            docker build -t ryu-admin:latest -f ../src/main/resources/Dockerfile . '''
+              echo '运行成功'
+            }
+
+          }
+        }
+
+        stage('构建resource镜像') {
+          steps {
+            container('maven') {
+              sh '''cd Ryu_resource/target
+            docker build -t ryu-resource:latest -f ../src/main/resources/Dockerfile .'''
+              echo '运行成功'
+            }
+
+          }
+        }
+
+        stage('构建search镜像') {
+          steps {
+            container('maven') {
+              sh '''cd Ryu_search/target
+            docker build -t ryu-search:latest -f ../src/main/resources/Dockerfile .'''
+              echo '运行成功'
+            }
+
+          }
+        }
+
+        stage('构建spider镜像') {
+          steps {
+            container('maven') {
+              sh '''cd Ryu_spider/target
+            docker build -t ryu-spider:latest -f ../src/main/resources/Dockerfile .'''
+              echo '运行成功'
+            }
+
+          }
+        }
+
+        stage('构建web镜像') {
+          steps {
+            container('maven') {
+              sh '''cd Ryu_web/target
+            docker build -t ryu-web:latest -f ../src/main/resources/Dockerfile .'''
+              echo '运行成功'
+            }
+
+          }
+        }
+
+        stage('构建sms镜像') {
+          steps {
+            container('maven') {
+              sh '''cd Ryu_sms/target
+            docker build -t ryu-sms:latest -f ../src/main/resources/Dockerfile . '''
+              echo '运行成功'
+            }
+
+          }
+        }
+
+        stage('构建monitor镜像') {
+          steps {
+            container('maven') {
+              sh '''cd Ryu_monitor/target
+            docker build -t ryu-monitor:latest -f ../src/main/resources/Dockerfile .'''
+              echo '运行成功'
+            }
+
+          }
+        }
+
+      }
+    }
+
+    stage('pull镜像') {
+      parallel {
+        stage('推送gateway镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'aliyun-id' ,usernameVariable : 'DOCKER_USERNAME' ,passwordVariable : 'DOCKER_PASSWORD' ,)]) {
+                sh 'echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USERNAME" --password-stdin'
+                sh 'docker tag  ryu-gateway:latest  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-gateway:SNAPSHOT-$BUILD_NUMBER '
+                sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-gateway:SNAPSHOT-$BUILD_NUMBER '
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送admin镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'aliyun-id' ,usernameVariable : 'DOCKER_USERNAME' ,passwordVariable : 'DOCKER_PASSWORD' ,)]) {
+                sh 'echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USERNAME" --password-stdin'
+                sh 'docker tag  ryu-admin:latest  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-admin:SNAPSHOT-$BUILD_NUMBER '
+                sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-admin:SNAPSHOT-$BUILD_NUMBER '
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送resource镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'aliyun-id' ,usernameVariable : 'DOCKER_USERNAME' ,passwordVariable : 'DOCKER_PASSWORD' ,)]) {
+                sh 'echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USERNAME" --password-stdin'
+                sh 'docker tag  ryu-resource:latest  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-resource:SNAPSHOT-$BUILD_NUMBER '
+                sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-resource:SNAPSHOT-$BUILD_NUMBER '
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送search镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'aliyun-id' ,usernameVariable : 'DOCKER_USERNAME' ,passwordVariable : 'DOCKER_PASSWORD' ,)]) {
+                sh 'echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USERNAME" --password-stdin'
+                sh 'docker tag  ryu-search:latest  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-search:SNAPSHOT-$BUILD_NUMBER '
+                sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-search:SNAPSHOT-$BUILD_NUMBER '
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送spider镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'aliyun-id' ,usernameVariable : 'DOCKER_USERNAME' ,passwordVariable : 'DOCKER_PASSWORD' ,)]) {
+                sh 'echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USERNAME" --password-stdin'
+                sh 'docker tag  ryu-spider:latest  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-spider:SNAPSHOT-$BUILD_NUMBER '
+                sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-spider:SNAPSHOT-$BUILD_NUMBER '
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送sms镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'aliyun-id' ,usernameVariable : 'DOCKER_USERNAME' ,passwordVariable : 'DOCKER_PASSWORD' ,)]) {
+                sh 'echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USERNAME" --password-stdin'
+                sh 'docker tag  ryu-sms:latest  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-sms:SNAPSHOT-$BUILD_NUMBER '
+                sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-sms:SNAPSHOT-$BUILD_NUMBER '
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送monitor镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'aliyun-id' ,usernameVariable : 'DOCKER_USERNAME' ,passwordVariable : 'DOCKER_PASSWORD' ,)]) {
+                sh 'echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USERNAME" --password-stdin'
+                sh 'docker tag  ryu-monitor:latest  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-monitor:SNAPSHOT-$BUILD_NUMBER '
+                sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-monitor:SNAPSHOT-$BUILD_NUMBER '
+              }
+
+            }
+
+          }
+        }
+
+        stage('推送web镜像') {
+          agent none
+          steps {
+            container('maven') {
+              withCredentials([usernamePassword(credentialsId : 'aliyun-id' ,usernameVariable : 'DOCKER_USERNAME' ,passwordVariable : 'DOCKER_PASSWORD' ,)]) {
+                sh 'echo "$DOCKER_PASSWORD" | docker login $REGISTRY -u "$DOCKER_USERNAME" --password-stdin'
+                sh 'docker tag  ryu-web:latest  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-web:SNAPSHOT-$BUILD_NUMBER '
+                sh 'docker push  $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-web:SNAPSHOT-$BUILD_NUMBER '
+              }
+
+            }
+
+          }
+        }
+
+      }
+    }
+
+    stage('部署镜像') {
+      parallel {
+        stage('ryu-gateway部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_gateway/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-admin') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_admin/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-resource部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_resource/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-spider部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_spider/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-search部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_search/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-web部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_web/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-monitor部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_monitor/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-sms部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_sms/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+      }
+    }
+
+  }
+  environment {
+    DOCKER_CREDENTIAL_ID = 'dockerhub-id'
+    GITHUB_CREDENTIAL_ID = 'github-id'
+    KUBECONFIG_CREDENTIAL_ID = 'demo-kubeconfig'
+    REGISTRY = 'registry.cn-guangzhou.aliyuncs.com'
+    DOCKERHUB_NAMESPACE = 'ryu_blog'
+    GITHUB_ACCOUNT = 'kubesphere'
+    APP_NAME = 'devops-java-sample'
+  }
+  parameters {
+    string(name: 'TAG_NAME', defaultValue: '1', description: '')
+  }
+}
