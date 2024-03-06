@@ -8,10 +8,10 @@ spring:
       username: nacos
       password: nacos
       discovery:
-        server-addr: naocs-6fie.blog:8848
+        server-addr: nacos-o273.blog:8848
         namespace: prod
       config:
-        server-addr: naocs-6fie.blog:8848
+        server-addr: nacos-o273.blog:8848
         file-extension: yaml
         #指定分组
         group: prod
