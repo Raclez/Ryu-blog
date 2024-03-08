@@ -43,8 +43,9 @@ pipeline {
           steps {
             container('maven') {
                 sh 'mv skywalking-agent.jar /Ryu_admin/target/ '
-              sh '''cd Ryu_admin/target
-            docker build -t ryu-admin:latest -f ../src/main/resources/Dockerfile . '''
+              sh 'cd Ryu_admin/target '
+              sh ' ls -al'
+          sh '  docker build -t ryu-admin:latest -f ../src/main/resources/Dockerfile .  '
               echo '运行成功'
             }
 
