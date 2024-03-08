@@ -1,4 +1,4 @@
-FROM skywalking-agent
+FROM registry.cn-guangzhou.aliyuncs.com/ryu_blog/skywalking-agent
 VOLUME /tmp
 ENV PARAMS="--spring.profiles.active=prod "
 ADD Ryu_admin-0.0.1-SNAPSHOT.jar /app.jar
