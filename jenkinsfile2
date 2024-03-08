@@ -42,9 +42,8 @@ pipeline {
         stage('构建admin镜像') {
           steps {
             container('maven') {
-                sh '''   mv skywalking-agent.jar /Ryu_admin/target/
+                sh '''
                cd Ryu_admin/target
-             ls -al
   docker build -t ryu-admin:latest -f ../src/main/resources/Dockerfile .   '''
               echo '运行成功'
             }
