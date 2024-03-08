@@ -6,4 +6,4 @@ RUN wget -O /skywalking-agent.jar http://minio.ryuzzz.cn:30446/blog/skywalking-a
 ADD Ryu_admin-0.0.1-SNAPSHOT.jar /app.jar
 ADD skywalking-agent.jar /skywalking-agent.jar
 
-ENTRYPOINT ["java","-javaagent:/skywalking-agent.jar", "-Xms1024m", "-Xmx1024m", "-jar", "/app.jar", "${PARAMS}"]
+ENTRYPOINT ["java","-javaagent:/skywalking-agent.jar", "-jar", "/app.jar", "${PARAMS}"]
