@@ -1,4 +1,4 @@
 FROM openjdk:8-jdk-alpine
 VOLUME /tmp
 ADD Ryu_monitor-0.0.1-SNAPSHOT.jar app.jar
-ENTRYPOINT ["java","-javaagent:/skywalking-agent/skywalking-agent.jar", "-jar", "/app.jar","-Dskywalking.collector.backend_service=skywalking.blog:11800","-Dskywalking.agent.service_name=ryu-monitor","-Xms256m","-Xmx256m"]
+ENTRYPOINT ["java","-javaagent:/skywalking-agent/skywalking-agent.jar", "-jar", "/app.jar","-Dskywalking.collector.backend_service=106.53.145.226:31337","-Dskywalking.agent.service_name=ryu-monitor","-Xms256m","-Xmx256m"]
