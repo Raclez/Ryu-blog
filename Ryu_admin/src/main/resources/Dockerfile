@@ -8,4 +8,4 @@ RUN tar -xvzf apache-skywalking-java-agent-9.1.0.tgz
 
 ADD Ryu_admin-0.0.1-SNAPSHOT.jar /app.jar
 
-ENTRYPOINT ["java","-javaagent:/skywalking-agent/skywalking-agent.jar", "-jar", "/app.jar","-Dskywalking.collector.backend_service=106.53.145.226:31337","-Dskywalking.agent.service_name=ryu-admin", "${PARAMS}"]
+ENTRYPOINT ["java","-javaagent:/skywalking-agent/skywalking-agent.jar", "-jar", "/app.jar","-Dskywalking.collector.backend_service=106.53.145.226:31337","-Dskywalking.agent.service_name=ryu-admin","-Xms512m","-Xmx512m","${PARAMS}"]
