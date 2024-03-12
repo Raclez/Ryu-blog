@@ -46,10 +46,6 @@ public class BlogRestApi {
     @ApiOperation(value = "获取博客列表", notes = "获取博客列表", response = String.class)
     @PostMapping("/getList")
     public String getList(@Validated({GetList.class}) @RequestBody BlogVO blogVO, BindingResult result) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println(authentication.getCredentials());
-        System.out.println(authentication.getPrincipal());
-        System.out.println(authentication.getAuthorities());
         ThrowableUtils.checkParamArgument(result);
         return ResultUtil.successWithData(blogService.getPageList(blogVO));
     }

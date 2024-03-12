@@ -1,5 +1,6 @@
 package com.example.demo.xo.service.impl;
 
+import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -546,6 +547,7 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         if(stringRedisTemplate.hasKey(BlogKey)&&stringRedisTemplate.opsForList().size(BlogKey)>= size * (currentPage)){
             List<Blog> list = stringRedisTemplate.opsForList().range(BlogKey, size*(currentPage-1), size * currentPage-1).stream().map(item -> JSON.parseObject(item, Blog.class)).collect(Collectors.toList());
             page.setRecords(list);
+            page.setTotal(stringRedisTemplate.opsForList().size(BlogKey));
             return page;
         }
         QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
@@ -696,9 +698,9 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         blog.setStatus(EStatus.ENABLE);
         blog.setOpenComment(blogVO.getOpenComment());
         Boolean isSave = blogService.save(blog);
-
+        stringRedisTemplate.delete(SysConf.BLOG+BaseSysConf.REDIS_SEGMENTATION+"LIST");
         //保存成功后，需要发送消息到solr 和 redis
-        updateSolrAndRedis(isSave, blog);
+//        updateSolrAndRedis(isSave, blog);
         return ResultUtil.successWithMessage(MessageConf.INSERT_SUCCESS);
     }
 
@@ -753,8 +755,9 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         blog.setStatus(EStatus.ENABLE);
 
         Boolean isSave = blog.updateById();
+        stringRedisTemplate.delete(SysConf.BLOG+BaseSysConf.REDIS_SEGMENTATION+"LIST");
         //保存成功后，需要发送消息到solr 和 redis
-        updateSolrAndRedis(isSave, blog);
+//        updateSolrAndRedis(isSave, blog);
         return ResultUtil.successWithMessage(MessageConf.UPDATE_SUCCESS);
     }
 
@@ -792,14 +795,14 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
             }
         });
         Boolean save = blogService.updateBatchById(blogList);
-
+        stringRedisTemplate.delete(SysConf.BLOG+BaseSysConf.REDIS_SEGMENTATION+"LIST");
         //保存成功后，需要发送消息到solr 和 redis
-        if (save) {
-            Map<String, Object> map = new HashMap<>();
-            map.put(SysConf.COMMAND, SysConf.EDIT_BATCH);
-            //发送到RabbitMq
-            rabbitTemplate.convertAndSend(SysConf.EXCHANGE_DIRECT, SysConf.Ryu_BLOG, map);
-        }
+//        if (save) {
+//            Map<String, Object> map = new HashMap<>();
+//            map.put(SysConf.COMMAND, SysConf.EDIT_BATCH);
+//            //发送到RabbitMq
+//            rabbitTemplate.convertAndSend(SysConf.EXCHANGE_DIRECT, SysConf.Ryu_BLOG, map);
+//        }
 
         return ResultUtil.successWithMessage(MessageConf.UPDATE_SUCCESS);
     }
@@ -809,26 +812,26 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         Blog blog = blogService.getById(blogVO.getUid());
         blog.setStatus(EStatus.DISABLED);
         Boolean save = blog.updateById();
-
+        stringRedisTemplate.delete(SysConf.BLOG+BaseSysConf.REDIS_SEGMENTATION+"LIST");
         //保存成功后，需要发送消息到solr 和 redis, 同时从专题管理Item中移除该博客
-        if (save) {
-            Map<String, Object> map = new HashMap<>();
-
-            map.put(SysConf.COMMAND, SysConf.DELETE);
-            map.put(SysConf.BLOG_UID, blog.getUid());
-            map.put(SysConf.LEVEL, blog.getLevel());
-            map.put(SysConf.CREATE_TIME, blog.getCreateTime());
-            //发送到RabbitMq
-            rabbitTemplate.convertAndSend(SysConf.EXCHANGE_DIRECT, SysConf.Ryu_BLOG, map);
-
-            // 移除所有包含该博客的专题Item
-            List<String> blogUidList = new ArrayList<>(Constants.NUM_ONE);
-            blogUidList.add(blogVO.getUid());
-            subjectItemService.deleteBatchSubjectItemByBlogUid(blogUidList);
-
-            // 移除该文章下所有评论
-            commentService.batchDeleteCommentByBlogUid(blogUidList);
-        }
+//        if (save) {
+//            Map<String, Object> map = new HashMap<>();
+//
+//            map.put(SysConf.COMMAND, SysConf.DELETE);
+//            map.put(SysConf.BLOG_UID, blog.getUid());
+//            map.put(SysConf.LEVEL, blog.getLevel());
+//            map.put(SysConf.CREATE_TIME, blog.getCreateTime());
+//            //发送到RabbitMq
+//            rabbitTemplate.convertAndSend(SysConf.EXCHANGE_DIRECT, SysConf.Ryu_BLOG, map);
+//
+//            // 移除所有包含该博客的专题Item
+//            List<String> blogUidList = new ArrayList<>(Constants.NUM_ONE);
+//            blogUidList.add(blogVO.getUid());
+//            subjectItemService.deleteBatchSubjectItemByBlogUid(blogUidList);
+//
+//            // 移除该文章下所有评论
+//            commentService.batchDeleteCommentByBlogUid(blogUidList);
+//        }
         return ResultUtil.successWithMessage(MessageConf.DELETE_SUCCESS);
     }
 
