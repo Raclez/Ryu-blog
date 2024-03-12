@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk-alpine
+FROM openjdk:11-jdk-alpine AS base
 VOLUME /tmp
 ENV PARAMS="--spring.profiles.active=prod "
 
