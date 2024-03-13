@@ -25,6 +25,11 @@ spec:
           image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-web:SNAPSHOT-$BUILD_NUMBER
           ports:
             - containerPort: 8603
+          env:
+            - name: SW_AGENT_COLLECTOR_BACKEND_SERVICES
+              value: "skywalking.blog:11800"
+            - name: SW_AGENT_NAME
+              value: "ryu-web"
       imagePullSecrets:
         - name: aliyun-docker
 ---

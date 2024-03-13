@@ -28,6 +28,11 @@ spec:
           
           ports:
             - containerPort: 8606  # 应用程序监听的端口
+          env:
+            - name: SW_AGENT_COLLECTOR_BACKEND_SERVICES
+              value: "skywalking.blog:11800"
+            - name: SW_AGENT_NAME
+              value: "ryu-monitor"
 ---
 apiVersion: v1
 kind: Service
