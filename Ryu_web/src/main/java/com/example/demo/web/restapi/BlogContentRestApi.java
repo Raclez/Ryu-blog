@@ -1,12 +1,14 @@
 package com.example.demo.web.restapi;
 
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo.commons.entity.Blog;
 import com.example.demo.commons.feign.PictureFeignClient;
 import com.example.demo.utils.IpUtils;
+import com.example.demo.utils.JsonUtils;
 import com.example.demo.utils.ResultUtil;
 import com.example.demo.utils.StringUtils;
 import com.example.demo.web.annotion.log.BussinessLog;
@@ -29,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,6 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -64,59 +68,63 @@ public class BlogContentRestApi {
     @Value(value = "${BLOG.REPRINTED_TEMPLATE}")
     private String REPRINTED_TEMPLATE;
 
-    @BussinessLog(value = "点击博客", behavior = EBehavior.BLOG_CONTNET)
-    @ApiOperation(value = "通过Uid获取博客内容", notes = "通过Uid获取博客内容")
-    @GetMapping("/getBlogByUid")
-    public String getBlogByUid(@ApiParam(name = "uid", value = "博客UID", required = false) @RequestParam(name = "uid", required = false) String uid,
-                               @ApiParam(name = "oid", value = "博客OID", required = false) @RequestParam(name = "oid", required = false, defaultValue = "0") Integer oid) {
 
-        HttpServletRequest request = RequestHolder.getRequest();
-        String ip = IpUtils.getIpAddr(request);
-        if (StringUtils.isEmpty(uid) && oid <= 0) {
-            return ResultUtil.result(SysConf.ERROR, MessageConf.PARAM_INCORRECT);
-        }
-        Blog blog = null;
-        if (StringUtils.isNotEmpty(uid)) {
-            blog = blogService.getById(uid);
-        } else {
-            QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq(SysConf.OID, oid);
-            blog = blogService.getOne(queryWrapper);
-        }
 
+@BussinessLog(value = "点击博客", behavior = EBehavior.BLOG_CONTNET)
+@ApiOperation(value = "通过Uid获取博客内容", notes = "通过Uid获取博客内容")
+@GetMapping("/getBlogByUid")
+public String getBlogByUid(@ApiParam(name = "uid", value = "博客UID", required = false) @RequestParam(name = "uid", required = false) String uid) {
+
+    HttpServletRequest request = RequestHolder.getRequest();
+    String ip = IpUtils.getIpAddr(request);
+    if (StringUtils.isEmpty(uid)) {
+        return ResultUtil.result(SysConf.ERROR, MessageConf.PARAM_INCORRECT);
+    }
+
+    // 从Redis中获取博客信息
+    String blogJson = (String) stringRedisTemplate.opsForHash().get("BLOG_DETAIL", uid);
+    Blog blog;
+    if (StringUtils.isNotEmpty(blogJson)) {
+        blog = JsonUtils.jsonToPojo(blogJson, Blog.class);
+    } else {
+        blog = blogService.getById(uid);
         if (blog == null || blog.getStatus() == EStatus.DISABLED || EPublish.NO_PUBLISH.equals(blog.getIsPublish())) {
             return ResultUtil.result(ECode.ERROR, MessageConf.BLOG_IS_DELETE);
         }
+        // 将博客信息存入Redis，设置过期时间为24小时
+        stringRedisTemplate.opsForHash().put("BLOG_DETAIL", uid, JSON.toJSONString(blog));
+    }
+    // 设置文章版权申明
+    CompletableFuture<Void> copyrightFuture = CompletableFuture.runAsync(() -> setBlogCopyright(blog));
+    //设置博客标签
+    CompletableFuture<Void> tagFuture = CompletableFuture.runAsync(() -> blogService.setTagByBlog(blog));
 
-        // 设置文章版权申明
-        setBlogCopyright(blog);
+    //获取分类
+    CompletableFuture<Void> sortFuture = CompletableFuture.runAsync(() -> blogService.setSortByBlog(blog));
 
-        //设置博客标签
-        blogService.setTagByBlog(blog);
+    //设置博客标题图
+    CompletableFuture<Void> photoFuture = CompletableFuture.runAsync(() -> setPhotoListByBlog(blog));
 
-        //获取分类
-        blogService.setSortByBlog(blog);
+    // 等待所有异步任务完成
+    CompletableFuture.allOf(copyrightFuture,tagFuture, sortFuture, photoFuture).join();
+    //从Redis取出数据，判断该用户是否点击过
+    String jsonResult = stringRedisTemplate.opsForValue().get("BLOG_CLICK:" + ip + "#" + blog.getUid());
 
-        //设置博客标题图
-        setPhotoListByBlog(blog);
+    if (StringUtils.isEmpty(jsonResult)) {
+        //给博客点击数增加
+        Integer clickCount = blog.getClickCount() + 1;
+        blog.setClickCount(clickCount);
 
-        //从Redis取出数据，判断该用户是否点击过
-        String jsonResult = stringRedisTemplate.opsForValue().get("BLOG_CLICK:" + ip + "#" + blog.getUid());
+        //将该用户点击记录存储到redis中, 24小时后过期
+        stringRedisTemplate.opsForValue().set(RedisConf.BLOG_CLICK + Constants.SYMBOL_COLON + ip + Constants.SYMBOL_WELL + blog.getUid(), blog.getClickCount().toString(),
+                24, TimeUnit.HOURS);
 
-        if (StringUtils.isEmpty(jsonResult)) {
-
-            //给博客点击数增加
-            Integer clickCount = blog.getClickCount() + 1;
-            blog.setClickCount(clickCount);
-            blog.updateById();
-
-            //将该用户点击记录存储到redis中, 24小时后过期
-            stringRedisTemplate.opsForValue().set(RedisConf.BLOG_CLICK + Constants.SYMBOL_COLON + ip + Constants.SYMBOL_WELL + blog.getUid(), blog.getClickCount().toString(),
-                    24, TimeUnit.HOURS);
-        }
-        return ResultUtil.result(SysConf.SUCCESS, blog);
+        //异步更新数据库
+        CompletableFuture.runAsync(blog::updateById);
     }
 
+    return ResultUtil.result(SysConf.SUCCESS, blog);
+}
     @ApiOperation(value = "通过Uid获取博客点赞数", notes = "通过Uid获取博客点赞数")
     @GetMapping("/getBlogPraiseCountByUid")
     public String getBlogPraiseCountByUid(@ApiParam(name = "uid", value = "博客UID", required = false) @RequestParam(name = "uid", required = false) String uid) {
