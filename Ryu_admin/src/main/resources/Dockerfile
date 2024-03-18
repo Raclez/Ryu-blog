@@ -2,9 +2,9 @@ FROM openjdk:8-jdk-alpine
 VOLUME /tmp
 
 
-RUN wget http://minio.ryuzzz.cn:30446/blog/skywalking-agent
+RUN wget http://ryuzzz.cn:30446/blog/apache-skywalking-java-agent-9.1.0.tgz
 
-
+RUN tar -xvzf apache-skywalking-java-agent-9.1.0.tgz
 
 ADD Ryu_admin-0.0.1-SNAPSHOT.jar /app.jar
 
