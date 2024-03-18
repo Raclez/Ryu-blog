@@ -4,6 +4,6 @@ metadata:
   name: config-map
 data:
   NACOS_DISCOVERY_ADDR: nacos-o273.blog:8848
-  NACOS_DISCOVERY_NAMESPACE: prod
+  NACOS_DISCOVERY_NAMESPACE: ${PRE:dev}
   NACOS_CONFIG_ADDR: nacos-o273.blog:8848
   NACOS_CONFIG_EXTENSION: yaml

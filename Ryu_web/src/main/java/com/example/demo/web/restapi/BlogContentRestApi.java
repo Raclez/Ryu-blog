@@ -70,30 +70,33 @@ public class BlogContentRestApi {
 
 
 
-@BussinessLog(value = "点击博客", behavior = EBehavior.BLOG_CONTNET)
-@ApiOperation(value = "通过Uid获取博客内容", notes = "通过Uid获取博客内容")
-@GetMapping("/getBlogByUid")
-public String getBlogByUid(@ApiParam(name = "uid", value = "博客UID", required = false) @RequestParam(name = "uid", required = false) String uid) {
+    @BussinessLog(value = "点击博客", behavior = EBehavior.BLOG_CONTNET)
+    @ApiOperation(value = "通过Uid获取博客内容", notes = "通过Uid获取博客内容")
+    @GetMapping("/getBlogByUid")
+    public String getBlogByUid(@ApiParam(name = "uid", value = "博客UID", required = false) @RequestParam(name = "uid", required = false) String uid,
+                               @ApiParam(name = "oid", value = "博客OID", required = false) @RequestParam(name = "oid", required = false, defaultValue = "0") Integer oid) {
 
     HttpServletRequest request = RequestHolder.getRequest();
     String ip = IpUtils.getIpAddr(request);
-    if (StringUtils.isEmpty(uid)) {
+    if (StringUtils.isEmpty(uid)&& oid <= 0) {
         return ResultUtil.result(SysConf.ERROR, MessageConf.PARAM_INCORRECT);
     }
-
-    // 从Redis中获取博客信息
-    String blogJson = (String) stringRedisTemplate.opsForHash().get("BLOG_DETAIL", uid);
     Blog blog;
-    if (StringUtils.isNotEmpty(blogJson)) {
-        blog = JsonUtils.jsonToPojo(blogJson, Blog.class);
-    } else {
-        blog = blogService.getById(uid);
+        String oidString = oid.toString();
+        // 从Redis中获取博客信息
+    if(stringRedisTemplate.opsForHash().hasKey("BLOG_DETAIL", oidString)){
+        String  blogJson= (String)stringRedisTemplate.opsForHash().get("BLOG_DETAIL", oidString);
+        blog= JSON.parseObject(blogJson, Blog.class);
+        return ResultUtil.result(SysConf.SUCCESS, blog);
+    }else {
+        QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(SysConf.OID, oid);
+        blog = blogService.getOne(queryWrapper);
         if (blog == null || blog.getStatus() == EStatus.DISABLED || EPublish.NO_PUBLISH.equals(blog.getIsPublish())) {
             return ResultUtil.result(ECode.ERROR, MessageConf.BLOG_IS_DELETE);
         }
-        // 将博客信息存入Redis，设置过期时间为24小时
-        stringRedisTemplate.opsForHash().put("BLOG_DETAIL", uid, JSON.toJSONString(blog));
     }
+
     // 设置文章版权申明
     CompletableFuture<Void> copyrightFuture = CompletableFuture.runAsync(() -> setBlogCopyright(blog));
     //设置博客标签
@@ -106,9 +109,10 @@ public String getBlogByUid(@ApiParam(name = "uid", value = "博客UID", required
     CompletableFuture<Void> photoFuture = CompletableFuture.runAsync(() -> setPhotoListByBlog(blog));
 
     // 等待所有异步任务完成
-    CompletableFuture.allOf(copyrightFuture,tagFuture, sortFuture, photoFuture).join();
-    //从Redis取出数据，判断该用户是否点击过
-    String jsonResult = stringRedisTemplate.opsForValue().get("BLOG_CLICK:" + ip + "#" + blog.getUid());
+       CompletableFuture.allOf(copyrightFuture, tagFuture, sortFuture, photoFuture).join();
+        stringRedisTemplate.opsForHash().put("BLOG_DETAIL", oidString, JSON.toJSONString(blog));
+        //从Redis取出数据，判断该用户是否点击过
+        String jsonResult = stringRedisTemplate.opsForValue().get(RedisConf.BLOG_CLICK + ip + "#" + blog.getUid());
 
     if (StringUtils.isEmpty(jsonResult)) {
         //给博客点击数增加

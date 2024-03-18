@@ -315,7 +315,7 @@
 //
 //    /**
 //     * 接收事件推送
-//     * 用法@RequestMapping(value = "/wx/api/v1/receiveEventPush.do", method = RequestMethod.POST, consumes = {"application/xml", "text/xml"}, produces = {"application/xml;charset=utf-8", "text/xml;charset=utf-8"})
+//     * 用法@RequestMapping(value = "/wx/api/v1/receiveEventPush.do", method = RequestMethod.POST, consumes = {"application/xml", "text/xml"}, ${PRE:dev}uces = {"application/xml;charset=utf-8", "text/xml;charset=utf-8"})
 //     * public Object receiveEventPush(@RequestBody DOMSource domSource) {
 //     * return WxUtils.receiveEventPush(domSource);
 //     * }

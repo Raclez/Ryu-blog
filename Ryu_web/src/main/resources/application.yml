@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: prod
+    active: ${PRE:dev}
 log:
   thread:
     corePoolSize: 100

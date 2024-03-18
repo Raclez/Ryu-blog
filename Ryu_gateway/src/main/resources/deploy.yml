@@ -33,6 +33,10 @@ spec:
               value: "skywalking.blog:11800"
             - name: SW_AGENT_NAME
               value: "ryu-gateway"
+            - name: SERVER_ADDRESS
+              value: nacos-o273.blog:8848
+            - name: PRE
+              value: prod
 ---
 apiVersion: v1
 kind: Service
