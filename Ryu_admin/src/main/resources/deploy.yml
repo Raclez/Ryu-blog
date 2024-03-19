@@ -25,7 +25,6 @@ spec:
       containers:
         - name: ryu-admin
           image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-admin:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
-
           ports:
             - containerPort: 8601  # 应用程序监听的端口
           env:
@@ -33,7 +32,7 @@ spec:
               value: "skywalking.blog:11800"
             - name: SW_AGENT_NAME
               value: "ryu-admin"
-            - name: SERVER_ADDRESS
+            - name: NACOS_ADDRESS
               value: nacos-o273.blog:8848
             - name: PRE
               value: prod

@@ -9,7 +9,7 @@ spring:
       username: nacos
       password: nacos
       discovery:
-        server-addr: ${SERVER_ADDRESS:ryu.asia:8848}
+        server-addr: ${NACOS_ADDRESS:ryu.asia:8848}
         namespace: ${PRE:dev}
       sentinel:
         transport:
@@ -18,7 +18,7 @@ spring:
           #默认8719端口,如果被占用会向上扫描。
           port: 8719
       config:
-        server-addr: ${SERVER_ADDRESS:ryu.asia:8848}
+        server-addr: ${NACOS_ADDRESS:ryu.asia:8848}
         file-extension: yaml
         #指定分组
         group: ${PRE:dev}
