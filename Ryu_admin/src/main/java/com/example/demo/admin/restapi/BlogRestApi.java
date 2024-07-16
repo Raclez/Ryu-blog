@@ -49,7 +49,7 @@ public class BlogRestApi {
         ThrowableUtils.checkParamArgument(result);
         return ResultUtil.successWithData(blogService.getPageList(blogVO));
     }
-    @AuthorityVerify
+//    @AuthorityVerify
     @ApiOperation(value = "获取博客通过id", notes = "获取博客通过id", response = String.class)
     @GetMapping("/getBlogById")
     public String getBlogById( @RequestParam String uid) {
