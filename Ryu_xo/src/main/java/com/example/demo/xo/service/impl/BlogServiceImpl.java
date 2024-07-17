@@ -94,6 +94,7 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
 
     @Autowired
     StringRedisTemplate stringRedisTemplate;
+
     @Override
     public List<Blog> setTagByBlogList(List<Blog> list) {
         for (Blog item : list) {
@@ -543,12 +544,22 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         Long size = blogVO.getPageSize();
         page.setCurrent(currentPage);
         page.setSize(size);
-        String BlogKey=SysConf.BLOG+BaseSysConf.REDIS_SEGMENTATION+"LIST";
-        if(stringRedisTemplate.hasKey(BlogKey)&&stringRedisTemplate.opsForList().size(BlogKey)>= size * (currentPage)){
-            List<Blog> list = stringRedisTemplate.opsForList().range(BlogKey, size*(currentPage-1), size * currentPage-1).stream().map(item -> JSON.parseObject(item, Blog.class)).collect(Collectors.toList());
-            page.setRecords(list);
-            page.setTotal(stringRedisTemplate.opsForList().size(BlogKey));
-            return page;
+        page.setTotal(blogMapper.countTotalBlogs());
+        String blogKey=SysConf.BLOG+BaseSysConf.REDIS_SEGMENTATION+"LIST";
+        // 检查 Redis 中是否存在该页的数据
+        if (stringRedisTemplate.hasKey(blogKey)) {
+            Long totalSize = stringRedisTemplate.opsForList().size(blogKey);
+            if (totalSize != null && totalSize >= size * currentPage) {
+                // 从 Redis 中获取当前页的数据
+                List<Blog> list = stringRedisTemplate.opsForList()
+                        .range(blogKey, size * (currentPage - 1), size * currentPage - 1)
+                        .stream()
+                        .map(item -> JSON.parseObject(item, Blog.class))
+                        .collect(Collectors.toList());
+
+                page.setRecords(list);
+                return page;
+            }
         }
         QueryWrapper<Blog> queryWrapper = new QueryWrapper<>();
         // 构建搜索条件
@@ -648,7 +659,7 @@ public class BlogServiceImpl extends SuperServiceImpl<BlogMapper, Blog> implemen
         );
 
         allOf.join();
-        list.stream().forEach(blog ->  stringRedisTemplate.opsForList().rightPush(BlogKey, JsonUtils.objectToJson(blog)));
+        list.stream().forEach(blog ->  stringRedisTemplate.opsForList().rightPush(blogKey, JsonUtils.objectToJson(blog)));
         pageList.setRecords(list);
         return pageList;
     }

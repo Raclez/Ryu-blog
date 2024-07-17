@@ -23,4 +23,9 @@
         oid, uid, title, summary, content, taguid, clickcount, collectcount, photo, status, createtime, updatetime
     </sql>
 
+    <!-- 查询总记录数 -->
+    <select id="countTotalBlogs" resultType="int">
+        SELECT COUNT(*)
+        FROM t_blog
+    </select>
 </mapper>
