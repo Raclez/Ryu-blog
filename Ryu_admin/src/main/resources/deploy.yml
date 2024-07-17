@@ -36,11 +36,6 @@ spec:
               value: nacos-o273.blog:8848
             - name: PRE
               value: prod
-          resources:
-            limits:
-              memory: "1Gi"   # 设置最大内存限制
-            requests:
-              memory: "512Mi"   # 设置内存请求
 ---
 apiVersion: v1
 kind: Service
