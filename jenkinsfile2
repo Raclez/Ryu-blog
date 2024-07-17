@@ -10,7 +10,7 @@ pipeline {
       agent none
       steps {
         container('base') {
-                  git(url: 'https://gitee.com/Ryucal/Ryu-blog.git', credentialsId: 'gitee-id', branch: 'master', changelog: true, poll: false)
+                  git(url: 'https://github.com/Raclez/Ryu-blog.git', credentialsId: 'github-id', branch: 'master', changelog: true, poll: false)
         }
 
       }
