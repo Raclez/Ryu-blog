@@ -120,7 +120,60 @@ pipeline {
       }
     }
 
-    stage('pull镜像') {
+
+    stage('部署镜像') {
+      parallel {
+        stage('ryu-gateway部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_gateway/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-admin') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_admin/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-resource部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_resource/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-spider部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_spider/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-search部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_search/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-web部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_web/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-monitor部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_monitor/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+        stage('ryu-sms部署') {
+          steps {
+            kubernetesDeploy(configs: 'Ryu_sms/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
+          }
+        }
+
+      }
+    }
+ stage('pull镜像') {
       parallel {
         stage('推送gateway镜像') {
           agent none
@@ -239,59 +292,6 @@ pipeline {
 
             }
 
-          }
-        }
-
-      }
-    }
-
-    stage('部署镜像') {
-      parallel {
-        stage('ryu-gateway部署') {
-          steps {
-            kubernetesDeploy(configs: 'Ryu_gateway/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
-          }
-        }
-
-        stage('ryu-admin') {
-          steps {
-            kubernetesDeploy(configs: 'Ryu_admin/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
-          }
-        }
-
-        stage('ryu-resource部署') {
-          steps {
-            kubernetesDeploy(configs: 'Ryu_resource/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
-          }
-        }
-
-        stage('ryu-spider部署') {
-          steps {
-            kubernetesDeploy(configs: 'Ryu_spider/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
-          }
-        }
-
-        stage('ryu-search部署') {
-          steps {
-            kubernetesDeploy(configs: 'Ryu_search/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
-          }
-        }
-
-        stage('ryu-web部署') {
-          steps {
-            kubernetesDeploy(configs: 'Ryu_web/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
-          }
-        }
-
-        stage('ryu-monitor部署') {
-          steps {
-            kubernetesDeploy(configs: 'Ryu_monitor/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
-          }
-        }
-
-        stage('ryu-sms部署') {
-          steps {
-            kubernetesDeploy(configs: 'Ryu_sms/src/main/resources/deploy.yml', enableConfigSubstitution: true, kubeconfigId: "$KUBECONFIG_CREDENTIAL_ID")
           }
         }
 
