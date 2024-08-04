@@ -6,7 +6,7 @@ metadata:
   name: ryu-admin
   namespace: blog
 spec:
-  replicas: 1  # 期望的副本数
+  replicas: 1
   selector:
     matchLabels:
       app: ryu-admin
@@ -24,9 +24,9 @@ spec:
         - name: aliyun-docker
       containers:
         - name: ryu-admin
-          image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-admin:SNAPSHOT-$BUILD_NUMBER  # 替换为你的容器镜像地址
+          image: $REGISTRY/$DOCKERHUB_NAMESPACE/ryu-admin:SNAPSHOT-$BUILD_NUMBER
           ports:
-            - containerPort: 8601  # 应用程序监听的端口
+            - containerPort: 8601
           env:
             - name: SW_AGENT_COLLECTOR_BACKEND_SERVICES
               value: "skywalking.blog:11800"
@@ -36,6 +36,16 @@ spec:
               value: nacos-o273.blog:8848
             - name: PRE
               value: prod
+        - name: arthas
+          image: hengyunabc/arthas
+          command: ["/bin/sh"]
+          args: ["-c", "while true; do sleep 30; done;"]
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /shared
+      volumes:
+        - name: shared-volume
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
