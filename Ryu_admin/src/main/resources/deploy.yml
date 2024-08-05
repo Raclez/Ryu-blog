@@ -36,16 +36,7 @@ spec:
               value: nacos-o273.blog:8848
             - name: PRE
               value: prod
-        - name: arthas
-          image: hengyunabc/arthas
-          command: ["/bin/sh"]
-          args: ["-c", "while true; do sleep 30; done;"]
-          volumeMounts:
-            - name: shared-volume
-              mountPath: /shared
-      volumes:
-        - name: shared-volume
-          emptyDir: {}
+
 ---
 apiVersion: v1
 kind: Service

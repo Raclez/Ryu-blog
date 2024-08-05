@@ -1,8 +1,8 @@
 package com.example.demo.xo.service;
 
+import com.example.demo.base.service.SuperService;
 import com.example.demo.commons.entity.CategoryMenu;
 import com.example.demo.xo.vo.CategoryMenuVO;
-import com.example.demo.base.service.SuperService;
 
 import java.util.List;
 import java.util.Map;
@@ -66,4 +66,12 @@ public interface CategoryMenuService extends SuperService<CategoryMenu> {
      * @param categoryMenuVO
      */
     public String stickCategoryMenu(CategoryMenuVO categoryMenuVO);
+
+
+    /**
+     * 当前角色查询菜单
+     * @param roleNames
+     * @return
+     */
+    public List<CategoryMenu> getMenusByRole(List<String> roleNames);
 }

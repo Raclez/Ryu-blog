@@ -1,23 +1,24 @@
 package com.example.demo.admin.security;
 
+import com.alibaba.fastjson.JSON;
 import com.example.demo.admin.global.RedisConf;
 import com.example.demo.admin.global.SysConf;
-import com.example.demo.base.exception.exceptionType.LoginException;
+
+import com.example.demo.base.global.Constants;
 import com.example.demo.commons.config.jwt.Audience;
 import com.example.demo.commons.config.jwt.JwtTokenUtil;
+import com.example.demo.commons.config.security.SecurityUser;
 import com.example.demo.commons.entity.OnlineAdmin;
 import com.example.demo.utils.*;
-import com.example.demo.utils.*;
-import com.example.demo.base.global.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.util.StopWatch;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.annotation.Resource;
@@ -26,8 +27,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 /**
  * JWT认证过滤器 【验证token有效性】
@@ -69,6 +68,9 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
     @Autowired
     private RedisUtil redisUtil;
 
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -83,73 +85,31 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
         }
 
         //请求头 'Authorization': tokenHead + token
-        if (!org.apache.commons.lang.StringUtils.isEmpty(authHeader) && authHeader.startsWith(tokenHead)) {
+        if (!StringUtils.isEmpty(authHeader) && authHeader.startsWith(tokenHead)) {
 
             log.error("传递过来的token为: {}", authHeader);
-
-            final String token = authHeader.substring(tokenHead.length());
             // 私钥
             String base64Secret = audience.getBase64Secret();
-            // 获取在线的管理员信息
-            String onlineAdmin = redisUtil.get(RedisConf.LOGIN_TOKEN_KEY + RedisConf.SEGMENTATION + authHeader);
-            if (StringUtils.isNotEmpty(onlineAdmin) && !jwtTokenUtil.isExpiration(token, base64Secret)) {
-                /**
-                 * 得到过期时间
-                 */
-                Date expirationDate = jwtTokenUtil.getExpiration(token, base64Secret);
-                long nowMillis = System.currentTimeMillis();
-                Date nowDate = new Date(nowMillis);
-                // 得到两个日期相差的间隔，秒
-                Integer survivalSecond = DateUtils.getSecondByTwoDay(expirationDate, nowDate);
-                // 当存活时间小于更新时间，那么将颁发新的Token到客户端，同时重置新的过期时间
-                // 而旧的Token将会在不久之后从Redis中过期
-                if (survivalSecond < refreshSecond) {
-                    // 生成一个新的Token
-                    String newToken = tokenHead + jwtTokenUtil.refreshToken(token, base64Secret, expiresSecond * 1000);
-                    // 生成新的token，发送到客户端
-                    CookieUtils.setCookie("Admin-Token", newToken, expiresSecond.intValue());
-                    OnlineAdmin newOnlineAdmin = JsonUtils.jsonToPojo(onlineAdmin, OnlineAdmin.class);
-                    // 获取旧的TokenUid
-                    String oldTokenUid = newOnlineAdmin.getTokenId();
-                    // 随机生成一个TokenUid，用于换取Token令牌
-                    String tokenUid = StringUtils.getUUID();
-                    newOnlineAdmin.setTokenId(tokenUid);
-                    newOnlineAdmin.setToken(newToken);
-                    newOnlineAdmin.setExpireTime(DateUtils.getDateStr(new Date(), expiresSecond));
-                    newOnlineAdmin.setLoginTime(DateUtils.getNowTime());
-                    // 移除原来的旧Token和TokenUid
-                    redisUtil.delete(RedisConf.LOGIN_TOKEN_KEY + Constants.SYMBOL_COLON + authHeader);
-                    redisUtil.delete(RedisConf.LOGIN_UUID_KEY + Constants.SYMBOL_COLON + oldTokenUid);
-                    // 将新token赋值，用于后续使用
-                    authHeader = newToken;
 
-                    // 将新的Token存入Redis中
-                    redisUtil.setEx(RedisConf.LOGIN_TOKEN_KEY + Constants.SYMBOL_COLON + newToken, JsonUtils.objectToJson(newOnlineAdmin), expiresSecond, TimeUnit.SECONDS);
-                    // 维护 uuid - token 互相转换的Redis集合【主要用于在线用户管理】
-                    redisUtil.setEx(RedisConf.LOGIN_UUID_KEY + Constants.SYMBOL_COLON + tokenUid, newToken, expiresSecond, TimeUnit.SECONDS);
-                }
-            } else {
-                chain.doFilter(request, response);
-                return;
-            }
+            String name = stringRedisTemplate.opsForValue().get("auth:token:"+authHeader);
 
-            String username = jwtTokenUtil.getUsername(token, base64Secret);
-            String adminUid = jwtTokenUtil.getUserUid(token, base64Secret);
+            if (name != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            //把adminUid存储到request中
-            request.setAttribute(SysConf.ADMIN_UID, adminUid);
-            request.setAttribute(SysConf.USER_NAME, username);
-            request.setAttribute(SysConf.TOKEN, authHeader);
-            log.info("解析出来用户: {}", username);
-            log.info("解析出来的用户Uid: {}", adminUid);
-
-            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                // 通过用户名加载SpringSecurity用户
-                String s = redisUtil.get(RedisConf.LOGIN_TOKEN_KEY + Constants.SYMBOL_COLON + token);
-                OnlineAdmin OnlineAdmin = (com.example.demo.commons.entity.OnlineAdmin) JsonUtils.jsonToObject(s, OnlineAdmin.class);
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
                 // 校验Token的有效性
+                SecurityUser userDetails = (SecurityUser) userDetailsService.loadUserByUsername(name);
+                final String token = authHeader.substring(tokenHead.length());
+
+
                 if (jwtTokenUtil.validateToken(token, userDetails, base64Secret)) {
+
+
+                    //把adminUid存储到request中
+            request.setAttribute(SysConf.ADMIN_UID, userDetails.admin.getUid());
+                    request.setAttribute(SysConf.USER_NAME, name);
+                    request.setAttribute(SysConf.TOKEN, authHeader);
+                    log.info("解析出来用户: {}", name);
+            log.info("解析出来的用户Uid: {}", userDetails.admin.getUid());
+
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(

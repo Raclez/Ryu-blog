@@ -3,7 +3,12 @@ package com.example.demo.xo.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.demo.base.enums.EMenuType;
+import com.example.demo.base.enums.EStatus;
+import com.example.demo.base.global.Constants;
+import com.example.demo.base.serviceImpl.SuperServiceImpl;
 import com.example.demo.commons.entity.CategoryMenu;
+import com.example.demo.commons.entity.Role;
 import com.example.demo.utils.RedisUtil;
 import com.example.demo.utils.ResultUtil;
 import com.example.demo.utils.StringUtils;
@@ -13,17 +18,14 @@ import com.example.demo.xo.global.SQLConf;
 import com.example.demo.xo.global.SysConf;
 import com.example.demo.xo.mapper.CategoryMenuMapper;
 import com.example.demo.xo.service.CategoryMenuService;
+import com.example.demo.xo.service.RoleService;
 import com.example.demo.xo.vo.CategoryMenuVO;
-import com.example.demo.base.enums.EMenuType;
-import com.example.demo.base.enums.EStatus;
-import com.example.demo.base.global.Constants;
-import com.example.demo.base.serviceImpl.SuperServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -41,6 +43,8 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
 
     @Autowired
     CategoryMenuService categoryMenuService;
+    @Autowired
+    RoleService roleService;
 
     @Override
     public Map<String, Object> getPageList(CategoryMenuVO categoryMenuVO) {
@@ -88,192 +92,89 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
         resultMap.put(SysConf.DATA, pageList);
         return resultMap;
     }
-
-    @Override
-    public List<CategoryMenu> getAllList(String keyword) {
-        CompletableFuture<List<CategoryMenu>> future1 = CompletableFuture.supplyAsync(() -> {
-            QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq(SQLConf.MENU_LEVEL, "1");
-            if (StringUtils.isNotEmpty(keyword)) {
-                queryWrapper.eq(SQLConf.UID, keyword);
-            }
-            queryWrapper.orderByDesc(SQLConf.SORT);
-            queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-            queryWrapper.eq(SQLConf.MENU_TYPE, EMenuType.MENU);
-            List<CategoryMenu> list = categoryMenuService.list(queryWrapper);
-                return  list;
-        });
-        CompletableFuture<List<CategoryMenu>> future2 = CompletableFuture.supplyAsync(() -> {
-            QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq(SQLConf.MENU_LEVEL, "2");
-            if (StringUtils.isNotEmpty(keyword)) {
-                queryWrapper.eq(SQLConf.UID, keyword);
-            }
-            queryWrapper.orderByDesc(SQLConf.SORT);
-            queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-            List<CategoryMenu> list = categoryMenuService.list(queryWrapper);
-            return list;
-        });
-  CompletableFuture<List<CategoryMenu>> future3 = CompletableFuture.supplyAsync(() -> {
-            QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq(SQLConf.MENU_LEVEL, "3");
-            if (StringUtils.isNotEmpty(keyword)) {
-                queryWrapper.eq(SQLConf.UID, keyword);
-            }
-            queryWrapper.orderByDesc(SQLConf.SORT);
-            queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-            List<CategoryMenu> list = categoryMenuService.list(queryWrapper);
-            return list;
-        });
-        List<CategoryMenu> list = null;
-        List<CategoryMenu> list1 = null;
-        List<CategoryMenu> list2 = null;
-        try {
-            list = future1.get();
-            list1 = future2.get();
-            list2 = future3.get();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
-        for (CategoryMenu categoryMenu : list1) {
-            ArrayList<CategoryMenu> menuArrayList = new ArrayList<>();
-            for (CategoryMenu menu : list2) {
-                if(menu.getParentUid().equals(categoryMenu.getUid())){
-                    menuArrayList.add(menu);
-                }
-            }
-            Collections.sort(menuArrayList, new Comparator<CategoryMenu>() {
-
-                    /*
-                     * int compare(CategoryMenu p1, CategoryMenu p2) 返回一个基本类型的整型，
-                     * 返回负数表示：p1 小于p2，
-                     * 返回0 表示：p1和p2相等，
-                     * 返回正数表示：p1大于p2
-                     */
-                    @Override
-                    public int compare(CategoryMenu o1, CategoryMenu o2) {
-
-                        //按照CategoryMenu的Sort进行降序排列
-                        if (o1.getSort() > o2.getSort()) {
-                            return -1;
-                        }
-                        if (o1.getSort().equals(o2.getSort())) {
-                            return 0;
-                        }
-                        return 1;
-                    }
-
-                });
-            categoryMenu.setChildCategoryMenu(menuArrayList);
-        }
-
-        for (CategoryMenu parentItem : list) {
-            List<CategoryMenu> tempList = new ArrayList<>();
-            for (CategoryMenu item : list1) {
-
-                if (item.getParentUid().equals(parentItem.getUid())) {
-                    tempList.add(item);
-                }
-            }
-            Collections.sort(tempList);
-            parentItem.setChildCategoryMenu(tempList);
-        }
-
-
-        return list;
-    }
-
-
-//@Override
+//    @Override
 //    public List<CategoryMenu> getAllList(String keyword) {
-//        QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
-//        queryWrapper.eq(SQLConf.MENU_LEVEL, "1");
-//        if (StringUtils.isNotEmpty(keyword)) {
-//            queryWrapper.eq(SQLConf.UID, keyword);
+//        CompletableFuture<List<CategoryMenu>> future1 = CompletableFuture.supplyAsync(() -> {
+//            QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
+//            queryWrapper.eq(SQLConf.MENU_LEVEL, "1");
+//            if (StringUtils.isNotEmpty(keyword)) {
+//                queryWrapper.eq(SQLConf.UID, keyword);
+//            }
+//            queryWrapper.orderByDesc(SQLConf.SORT);
+//            queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
+//            queryWrapper.eq(SQLConf.MENU_TYPE, EMenuType.MENU);
+//            List<CategoryMenu> list = categoryMenuService.list(queryWrapper);
+//            return  list;
+//        });
+//        CompletableFuture<List<CategoryMenu>> future2 = CompletableFuture.supplyAsync(() -> {
+//            QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
+//            queryWrapper.eq(SQLConf.MENU_LEVEL, "2");
+//            if (StringUtils.isNotEmpty(keyword)) {
+//                queryWrapper.eq(SQLConf.UID, keyword);
+//            }
+//            queryWrapper.orderByDesc(SQLConf.SORT);
+//            queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
+//            List<CategoryMenu> list = categoryMenuService.list(queryWrapper);
+//            return list;
+//        });
+//        CompletableFuture<List<CategoryMenu>> future3 = CompletableFuture.supplyAsync(() -> {
+//            QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
+//            queryWrapper.eq(SQLConf.MENU_LEVEL, "3");
+//            if (StringUtils.isNotEmpty(keyword)) {
+//                queryWrapper.eq(SQLConf.UID, keyword);
+//            }
+//            queryWrapper.orderByDesc(SQLConf.SORT);
+//            queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
+//            List<CategoryMenu> list = categoryMenuService.list(queryWrapper);
+//            return list;
+//        });
+//        List<CategoryMenu> list = null;
+//        List<CategoryMenu> list1 = null;
+//        List<CategoryMenu> list2 = null;
+//        try {
+//            list = future1.get();
+//            list1 = future2.get();
+//            list2 = future3.get();
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        } catch (ExecutionException e) {
+//            throw new RuntimeException(e);
 //        }
-//        queryWrapper.orderByDesc(SQLConf.SORT);
-//        queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-//        queryWrapper.eq(SQLConf.MENU_TYPE, EMenuType.MENU);
-//        List<CategoryMenu> list = categoryMenuService.list(queryWrapper);
-//
-//        //获取所有的ID，去寻找他的子目录
-//        List<String> ids = new ArrayList<>();
-//        list.forEach(item -> {
-//            if (StringUtils.isNotEmpty(item.getUid())) {
-//                ids.add(item.getUid());
-//            }
-//        });
-//
-//        QueryWrapper<CategoryMenu> childWrapper = new QueryWrapper<>();
-//        childWrapper.in(SQLConf.PARENT_UID, ids);
-//        childWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-//        Collection<CategoryMenu> childList = categoryMenuService.list(childWrapper);
-//
-//        //获取所有的二级菜单，去寻找他的子按钮
-//        List<String> secondMenuUids = new ArrayList<>();
-//        childList.forEach(item -> {
-//            if (StringUtils.isNotEmpty(item.getUid())) {
-//                secondMenuUids.add(item.getUid());
-//            }
-//        });
-//
-//        QueryWrapper<CategoryMenu> buttonWrapper = new QueryWrapper<>();
-//        buttonWrapper.in(SQLConf.PARENT_UID, secondMenuUids);
-//        buttonWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-//        Collection<CategoryMenu> buttonList = categoryMenuService.list(buttonWrapper);
-//
-//        Map<String, List<CategoryMenu>> map = new HashMap<>();
-//        buttonList.forEach(item -> {
-//            if (StringUtils.isNotEmpty(item.getParentUid())) {
-//                if (map.get(item.getParentUid()) == null) {
-//                    List<CategoryMenu> tempList = new ArrayList<>();
-//                    tempList.add(item);
-//                    map.put(item.getParentUid(), tempList);
-//                } else {
-//                    List<CategoryMenu> tempList = map.get(item.getParentUid());
-//                    tempList.add(item);
-//                    map.put(item.getParentUid(), tempList);
+//        for (CategoryMenu categoryMenu : list1) {
+//            ArrayList<CategoryMenu> menuArrayList = new ArrayList<>();
+//            for (CategoryMenu menu : list2) {
+//                if(menu.getParentUid().equals(categoryMenu.getUid())){
+//                    menuArrayList.add(menu);
 //                }
 //            }
-//        });
+//            Collections.sort(menuArrayList, new Comparator<CategoryMenu>() {
 //
-//        // 给二级菜单设置三级按钮
-//        childList.forEach(item -> {
-//            if (map.get(item.getUid()) != null) {
-//                List<CategoryMenu> tempList = map.get(item.getUid());
-//                Collections.sort(tempList, new Comparator<CategoryMenu>() {
+//                /*
+//                 * int compare(CategoryMenu p1, CategoryMenu p2) 返回一个基本类型的整型，
+//                 * 返回负数表示：p1 小于p2，
+//                 * 返回0 表示：p1和p2相等，
+//                 * 返回正数表示：p1大于p2
+//                 */
+//                @Override
+//                public int compare(CategoryMenu o1, CategoryMenu o2) {
 //
-//                    /*
-//                     * int compare(CategoryMenu p1, CategoryMenu p2) 返回一个基本类型的整型，
-//                     * 返回负数表示：p1 小于p2，
-//                     * 返回0 表示：p1和p2相等，
-//                     * 返回正数表示：p1大于p2
-//                     */
-//                    @Override
-//                    public int compare(CategoryMenu o1, CategoryMenu o2) {
-//
-//                        //按照CategoryMenu的Sort进行降序排列
-//                        if (o1.getSort() > o2.getSort()) {
-//                            return -1;
-//                        }
-//                        if (o1.getSort().equals(o2.getSort())) {
-//                            return 0;
-//                        }
-//                        return 1;
+//                    //按照CategoryMenu的Sort进行降序排列
+//                    if (o1.getSort() > o2.getSort()) {
+//                        return -1;
 //                    }
+//                    if (o1.getSort().equals(o2.getSort())) {
+//                        return 0;
+//                    }
+//                    return 1;
+//                }
 //
-//                });
-//                item.setChildCategoryMenu(tempList);
-//            }
-//        });
+//            });
+//            categoryMenu.setChildCategoryMenu(menuArrayList);
+//        }
 //
-//
-//        // 给一级菜单设置二级菜单
 //        for (CategoryMenu parentItem : list) {
 //            List<CategoryMenu> tempList = new ArrayList<>();
-//            for (CategoryMenu item : childList) {
+//            for (CategoryMenu item : list1) {
 //
 //                if (item.getParentUid().equals(parentItem.getUid())) {
 //                    tempList.add(item);
@@ -282,8 +183,71 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
 //            Collections.sort(tempList);
 //            parentItem.setChildCategoryMenu(tempList);
 //        }
+//
+//
 //        return list;
 //    }
+
+//    @Override
+    public List<CategoryMenu> getAllList(String keyword) {
+        List<CategoryMenu> categoryMenus = this.baseMapper.selectList(null);
+
+        List<CategoryMenu>  categoryMenuList= buildCategoryMenus(categoryMenus);
+        return categoryMenuList;
+    }
+    private List<CategoryMenu> getChildrenMenus(CategoryMenu category, List<CategoryMenu> all) {
+        return all.stream()
+                .filter(category1 -> category1.getParentUid().equals(category.getUid()))
+                .sorted((s1,s2)->s2.getSort()-s1.getSort())
+                .map(category1 -> {
+                    category1.setChildCategoryMenu(getChildrenMenus(category1, all));
+                    return category1;
+                })
+                .collect(Collectors.toList());
+    }
+   public List<CategoryMenu> getMenusByRole(List<String> roleNames){
+       if (roleNames == null || roleNames.isEmpty()) {
+           return Collections.emptyList();
+       }
+
+       List<CategoryMenu> allCategoryMenus = new ArrayList<>();
+
+       for (String roleName : roleNames) {
+           Role role = roleService.getOne(new QueryWrapper<Role>().eq("role_name", roleName));
+
+           if (role == null || role.getCategoryMenuUids() == null) {
+               continue;
+           }
+
+           String[] split = role.getCategoryMenuUids().replace("[", "").replace("]", "")
+                   .replace("\"", "").split(",");
+           List<String> menuIds = Arrays.asList(split);
+
+           // 查询菜单信息
+           List<CategoryMenu> categoryMenus = this.baseMapper.selectBatchIds(menuIds);
+           // 构建菜单树结构
+           List<CategoryMenu> buildCategoryMenus = buildCategoryMenus(categoryMenus);
+
+           allCategoryMenus.addAll(buildCategoryMenus);
+       }
+
+       // 移除重复的菜单项（如果需要）
+       return allCategoryMenus.stream()
+               .distinct()
+               .collect(Collectors.toList());
+
+    }
+    private List<CategoryMenu> buildCategoryMenus(List<CategoryMenu> categoryMenus) {
+        // 构建一级菜单
+        return categoryMenus.stream()
+                .filter(item -> item.getParentUid() .equals("0"))
+                .map(categoryMenu -> {
+                    categoryMenu.setChildCategoryMenu(getChildrenMenus(categoryMenu, categoryMenus));
+                    return categoryMenu;
+                })
+                .sorted((s1,s2)->s2.getSort()-s1.getSort())
+                .collect(Collectors.toList());
+    }
 
     @Override
     public List<CategoryMenu> getButtonAllList(String keyword) {
@@ -366,7 +330,7 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
         categoryMenu.setName(categoryMenuVO.getName());
         categoryMenu.setUrl(categoryMenuVO.getUrl());
         categoryMenu.setIsShow(categoryMenuVO.getIsShow());
-        categoryMenu.setUpdateTime(new Date());
+        categoryMenu.setUpdateTime(LocalDateTime.now());
         categoryMenu.setIsJumpExternalUrl(categoryMenuVO.getIsJumpExternalUrl());
         categoryMenu.insert();
         return ResultUtil.successWithMessage(MessageConf.INSERT_SUCCESS);
@@ -384,7 +348,7 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
         categoryMenu.setName(categoryMenuVO.getName());
         categoryMenu.setUrl(categoryMenuVO.getUrl());
         categoryMenu.setIsShow(categoryMenuVO.getIsShow());
-        categoryMenu.setUpdateTime(new Date());
+        categoryMenu.setUpdateTime(LocalDateTime.now());
         categoryMenu.setIsJumpExternalUrl(categoryMenuVO.getIsJumpExternalUrl());
         categoryMenu.updateById();
         // 修改成功后，需要删除redis中所有的admin访问路径
@@ -403,7 +367,7 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
         }
         CategoryMenu categoryMenu = categoryMenuService.getById(categoryMenuVO.getUid());
         categoryMenu.setStatus(EStatus.DISABLED);
-        categoryMenu.setUpdateTime(new Date());
+        categoryMenu.setUpdateTime(LocalDateTime.now());
         categoryMenu.updateById();
         // 修改成功后，需要删除redis中所有的admin访问路径
         deleteAdminVisitUrl();
@@ -428,7 +392,7 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
         }
         Integer sortCount = maxSort.getSort() + 1;
         categoryMenu.setSort(sortCount);
-        categoryMenu.setUpdateTime(new Date());
+        categoryMenu.setUpdateTime(LocalDateTime.now());
         categoryMenu.updateById();
         return ResultUtil.successWithMessage(MessageConf.OPERATION_SUCCESS);
     }

@@ -1,12 +1,15 @@
 package com.example.demo.admin.restapi;
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.demo.admin.global.MessageConf;
 import com.example.demo.admin.global.RedisConf;
 import com.example.demo.admin.global.SQLConf;
 import com.example.demo.admin.global.SysConf;
+import com.example.demo.admin.security.SecurityUserDetailsServiceImpl;
 import com.example.demo.commons.config.jwt.Audience;
 import com.example.demo.commons.config.jwt.JwtTokenUtil;
+import com.example.demo.commons.config.security.SecurityUser;
 import com.example.demo.commons.entity.Admin;
 import com.example.demo.commons.entity.CategoryMenu;
 import com.example.demo.commons.entity.OnlineAdmin;
@@ -28,9 +31,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,6 +48,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 登录管理 RestApi【为了更好地使用security放行把登录管理放在AuthRestApi中】
@@ -74,12 +81,23 @@ public class LoginRestApi {
     private String tokenHead;
     @Value(value = "${isRememberMeExpiresSecond}")
     private int isRememberMeExpiresSecond;
+    /**
+     * token过期的时间
+     */
+    @Value(value = "${audience.expiresSecond}")
+    private Long expiresSecond;
+
+
     @Autowired
     private RedisUtil redisUtil;
     @Resource
     private PictureFeignClient pictureFeignClient;
     @Autowired
     private WebConfigService webConfigService;
+    @Autowired
+    private AuthenticationManager authenticationManager;
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
 
     @ApiOperation(value = "用户登录", notes = "用户登录")
     @PostMapping("/login")
@@ -91,60 +109,30 @@ public class LoginRestApi {
         if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
             return ResultUtil.result(SysConf.ERROR, "账号或密码不能为空");
         }
-        String ip = IpUtils.getIpAddr(request);
-        String limitCount = redisUtil.get(RedisConf.LOGIN_LIMIT + RedisConf.SEGMENTATION + ip);
-        if (StringUtils.isNotEmpty(limitCount)) {
-            Integer tempLimitCount = Integer.valueOf(limitCount);
-            if (tempLimitCount >= Constants.NUM_FIVE) {
-                return ResultUtil.result(SysConf.ERROR, "密码输错次数过多,已被锁定30分钟");
-            }
-        }
-        Boolean isEmail = CheckUtils.checkEmail(username);
-        Boolean isMobile = CheckUtils.checkMobileNumber(username);
-        QueryWrapper<Admin> queryWrapper = new QueryWrapper<>();
-        if (isEmail) {
-            queryWrapper.eq(SQLConf.EMAIL, username);
-        } else if (isMobile) {
-            queryWrapper.eq(SQLConf.MOBILE, username);
-        } else {
-            queryWrapper.eq(SQLConf.USER_NAME, username);
-        }
-        queryWrapper.last(SysConf.LIMIT_ONE);
-        queryWrapper.eq(SysConf.STATUS, EStatus.ENABLE);
-        Admin admin = adminService.getOne(queryWrapper);
+//        String ip = IpUtils.getIpAddr(request);
+//        String limitCount = redisUtil.get(RedisConf.LOGIN_LIMIT + RedisConf.SEGMENTATION + ip);
 
-        if (admin == null) {
-            // 设置错误登录次数
-            log.error("该管理员不存在");
-            return ResultUtil.result(SysConf.ERROR, String.format(MessageConf.LOGIN_ERROR, setLoginCommit(request)));
-        }
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(username, password)
+        );
+        SecurityUser admin = (SecurityUser) authentication.getPrincipal();
         // 对密码进行加盐加密验证，采用SHA-256 + 随机盐【动态加盐】 + 密钥对密码进行加密
         PasswordEncoder encoder = new BCryptPasswordEncoder();
-        boolean isPassword = encoder.matches(password, admin.getPassWord());
+        boolean isPassword = encoder.matches(password, admin.getPassword());
         if (!isPassword) {
             //密码错误，返回提示
             log.error("管理员密码错误");
             return ResultUtil.result(SysConf.ERROR, String.format(MessageConf.LOGIN_ERROR, setLoginCommit(request)));
         }
-        if(singleLogin){
-                adminService.checkSameUser(username);
-        }
-        List<String> roleUids = new ArrayList<>();
-        roleUids.add(admin.getRoleUid());
-        List<Role> roles = (List<Role>) roleService.listByIds(roleUids);
+//        if(singleLogin){
+//                adminService.checkSameUser(username);
+//        }
+//
 
-        if (roles.size() <= 0) {
-            return ResultUtil.result(SysConf.ERROR, MessageConf.NO_ROLE);
-        }
-        String roleNames = null;
-        for (Role role : roles) {
-            roleNames += (role.getRoleName() + Constants.SYMBOL_COMMA);
-        }
-        String roleName = roleNames.substring(0, roleNames.length() - 2);
         long expiration = isRememberMe ? isRememberMeExpiresSecond : audience.getExpiresSecond();
-        String jwtToken = jwtTokenUtil.createJWT(admin.getUserName(),
-                admin.getUid(),
-                roleName,
+        String jwtToken = jwtTokenUtil.createJWT(admin.getUsername(),
+                admin.admin.getUid(),
+                admin.getAuthorities().toString(),
                 audience.getClientId(),
                 audience.getName(),
                 expiration * 1000,
@@ -152,20 +140,28 @@ public class LoginRestApi {
         String token = tokenHead + jwtToken;
         Map<String, Object> result = new HashMap<>(Constants.NUM_ONE);
         result.put(SysConf.TOKEN, token);
+        String oldToken = stringRedisTemplate.opsForValue().get("auth:username:" + admin.admin.getUserName());
 
-        //进行登录相关操作
-        Integer count = admin.getLoginCount() + 1;
-        admin.setLoginCount(count);
-        admin.setLastLoginIp(IpUtils.getIpAddr(request));
-        admin.setLastLoginTime(new Date());
-        admin.updateById();
-        // 设置token到validCode，用于记录登录用户
-        admin.setValidCode(token);
-        // 设置tokenUid，【主要用于换取token令牌，防止token直接暴露到在线用户管理中】
-        admin.setTokenUid(StringUtils.getUUID());
-        admin.setRole(roles.get(0));
-        // 添加在线用户到Redis中【设置过期时间】
-        adminService.addOnlineAdmin(admin, expiration);
+        if (StringUtils.isNotEmpty(oldToken)) {
+            stringRedisTemplate.delete("auth:token:" + oldToken);
+        }
+        stringRedisTemplate.opsForValue().set("auth:token:" + token, admin.getUsername(), expiresSecond, TimeUnit.SECONDS);
+        stringRedisTemplate.opsForValue().set("auth:username:"+admin.getUsername(),token,expiresSecond,TimeUnit.SECONDS);
+
+
+//        //进行登录相关操作
+//        Integer count = admin.getLoginCount() + 1;
+//        admin.setLoginCount(count);
+//        admin.setLastLoginIp(IpUtils.getIpAddr(request));
+//        admin.setLastLoginTime(LocalDateTime.now());
+//        admin.updateById();
+//        // 设置token到validCode，用于记录登录用户
+//        admin.setValidCode(token);
+//        // 设置tokenUid，【主要用于换取token令牌，防止token直接暴露到在线用户管理中】
+//        admin.setTokenUid(StringUtils.getUUID());
+//        admin.setRole(roles.get(0));
+//        // 添加在线用户到Redis中【设置过期时间】
+//        adminService.addOnlineAdmin(admin, expiration);
         return ResultUtil.result(SysConf.SUCCESS, result);
     }
 
@@ -201,69 +197,13 @@ public class LoginRestApi {
     @ApiOperation(value = "获取当前用户的菜单", notes = "获取当前用户的菜单", response = String.class)
     @GetMapping(value = "/getMenu")
     public String getMenu(HttpServletRequest request) {
+          SecurityUser securityUser = (SecurityUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        Collection<CategoryMenu> categoryMenuList = new ArrayList<>();
-        Admin admin = adminService.getById(request.getAttribute(SysConf.ADMIN_UID).toString());
+        Collection<? extends GrantedAuthority> authorities = securityUser.getAuthorities();
+        List<String> roleName = authorities.stream().map(authorit -> authorit.getAuthority()).collect(Collectors.toList());
+        List<CategoryMenu> menusByRole = categoryMenuService.getMenusByRole(roleName);
 
-        List<String> roleUid = new ArrayList<>();
-        roleUid.add(admin.getRoleUid());
-        Collection<Role> roleList = roleService.listByIds(roleUid);
-        List<String> categoryMenuUids = new ArrayList<>();
-        roleList.forEach(item -> {
-            String caetgoryMenuUids = item.getCategoryMenuUids();
-            String[] uids = caetgoryMenuUids.replace("[", "").replace("]", "").replace("\"", "").split(",");
-            categoryMenuUids.addAll(Arrays.asList(uids));
-        });
-        categoryMenuList = categoryMenuService.listByIds(categoryMenuUids);
-
-        // 从三级级分类中查询出 二级分类
-        List<CategoryMenu> buttonList = new ArrayList<>();
-        Set<String> secondMenuUidList = new HashSet<>();
-        categoryMenuList.forEach(item -> {
-            // 查询二级分类
-            if (item.getMenuType() == EMenuType.MENU && item.getMenuLevel() == SysConf.TWO) {
-                secondMenuUidList.add(item.getUid());
-            }
-            // 从三级分类中，得到二级分类
-            if (item.getMenuType() == EMenuType.BUTTON && StringUtils.isNotEmpty(item.getParentUid())) {
-                // 找出二级菜单
-                secondMenuUidList.add(item.getParentUid());
-                // 找出全部按钮
-                buttonList.add(item);
-            }
-        });
-
-        Collection<CategoryMenu> childCategoryMenuList = new ArrayList<>();
-        Collection<CategoryMenu> parentCategoryMenuList = new ArrayList<>();
-        List<String> parentCategoryMenuUids = new ArrayList<>();
-
-        if (secondMenuUidList.size() > 0) {
-            childCategoryMenuList = categoryMenuService.listByIds(secondMenuUidList);
-        }
-
-        childCategoryMenuList.forEach(item -> {
-            //选出所有的二级分类
-            if (item.getMenuLevel() == SysConf.TWO) {
-
-                if (StringUtils.isNotEmpty(item.getParentUid())) {
-                    parentCategoryMenuUids.add(item.getParentUid());
-                }
-            }
-        });
-
-        if (parentCategoryMenuUids.size() > 0) {
-            parentCategoryMenuList = categoryMenuService.listByIds(parentCategoryMenuUids);
-        }
-
-        List<CategoryMenu> list = new ArrayList<>(parentCategoryMenuList);
-
-        //对parent进行排序
-        Map<String, Object> map = new HashMap<>(Constants.NUM_THREE);
-        Collections.sort(list);
-        map.put(SysConf.PARENT_LIST, list);
-        map.put(SysConf.SON_LIST, childCategoryMenuList);
-        map.put(SysConf.BUTTON_LIST, buttonList);
-        return ResultUtil.result(SysConf.SUCCESS, map);
+        return ResultUtil.result(SysConf.SUCCESS, menusByRole);
     }
 
     @ApiOperation(value = "获取网站名称", notes = "获取网站名称", response = String.class)

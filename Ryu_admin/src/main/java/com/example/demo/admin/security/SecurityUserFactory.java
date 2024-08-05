@@ -27,12 +27,7 @@ public final class SecurityUserFactory {
      * @return
      */
     public static SecurityUser create(Admin admin) {
-        boolean enabled = admin.getStatus() == EStatus.ENABLE;
-        return new SecurityUser(
-                admin.getUid(),
-                admin.getUserName(),
-                admin.getPassWord(),
-                enabled,
+        return new SecurityUser(admin,
                 mapToGrantedAuthorities(admin.getRoleNames())
         );
     }

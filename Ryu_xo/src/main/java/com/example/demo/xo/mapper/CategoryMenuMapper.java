@@ -1,7 +1,7 @@
 package com.example.demo.xo.mapper;
 
-import com.example.demo.commons.entity.CategoryMenu;
 import com.example.demo.base.mapper.SuperMapper;
+import com.example.demo.commons.entity.CategoryMenu;
 
 /**
  * 菜单表 Mapper 接口

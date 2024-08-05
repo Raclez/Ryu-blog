@@ -1,5 +1,7 @@
 package com.example.demo.commons.config.security;
 
+import com.example.demo.base.enums.EStatus;
+import com.example.demo.commons.entity.Admin;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,25 +18,19 @@ public class SecurityUser implements UserDetails {
     /**
      *
      */
+    public Admin admin;
     private static final long serialVersionUID = 1L;
 
-    private final String uid;
-    private final String username;
-    private final String password;
+//    private final String uid;
+//    private final String userName;
+//    private final String passWord;
     private final boolean enabled;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public SecurityUser(
-            String uid,
-            String username,
-            String password,
-            boolean enabled,
-            Collection<? extends GrantedAuthority> authorities) {
-        this.uid = uid;
-        this.username = username;
-        this.password = password;
-        this.enabled = enabled;
+    public SecurityUser(Admin admin, Collection<? extends GrantedAuthority> authorities){
+            this.admin=admin;
         this.authorities = authorities;
+        enabled=(admin.getStatus() == EStatus.ENABLE);
     }
 
     /**
@@ -47,21 +43,16 @@ public class SecurityUser implements UserDetails {
         return authorities;
     }
 
-    @JsonIgnore
-    public String getUid() {
-        return uid;
-    }
-
-    @JsonIgnore
     @Override
     public String getPassword() {
-        return password;
+        return admin.getPassWord();
     }
 
     @Override
     public String getUsername() {
-        return username;
+        return admin.getUserName();
     }
+
 
     /**
      * 账户是否激活
