@@ -94,7 +94,7 @@ public class SecurityUserDetailsServiceImpl implements UserDetailsService {
         if (attempts >= MAX_FAILED_ATTEMPTS) {
             Admin user = adminService.getAdminByUser(username);
             if (user != null) {
-                user.setLocked(true);
+//                user.setLocked(true);
                 adminService.save(user);
             }
             redisTemplate.delete(key);
@@ -104,9 +104,7 @@ public class SecurityUserDetailsServiceImpl implements UserDetailsService {
         }
     }
 
-    public static void main(String[] args) {
-        System.out.println(LocalDateTime.now());
-    }
+
     public void resetFailedLoginAttempts(String username) {
         redisTemplate.delete("failedAttempts:" + username);
     }

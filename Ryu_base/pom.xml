@@ -26,9 +26,8 @@
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
-            <version>${Hutool.version}</version>
+            <version>4.6.4</version>
         </dependency>
 
     </dependencies>
-
 </project>

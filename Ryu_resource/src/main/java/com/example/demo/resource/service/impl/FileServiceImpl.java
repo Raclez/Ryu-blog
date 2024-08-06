@@ -100,7 +100,7 @@ public class FileServiceImpl extends SuperServiceImpl<FileMapper, File> implemen
         if (StringUtils.isEmpty(fileIds)) {
             log.error(MessageConf.PICTURE_UID_IS_NULL);
             return ResultUtil.result(SysConf.ERROR, MessageConf.PICTURE_UID_IS_NULL);
-        } else {
+        }
             List<Map<String, Object>> list = new ArrayList<>();
             List<String> changeStringToString = StringUtils.changeStringToString(fileIds, code);
             QueryWrapper<File> queryWrapper = new QueryWrapper<>();
@@ -130,7 +130,7 @@ public class FileServiceImpl extends SuperServiceImpl<FileMapper, File> implemen
                 }
             }
             return ResultUtil.result(SysConf.SUCCESS, list);
-        }
+
     }
 
     @Override

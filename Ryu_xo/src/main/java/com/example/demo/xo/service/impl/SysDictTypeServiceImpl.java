@@ -3,6 +3,7 @@ package com.example.demo.xo.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.demo.commons.config.security.SecurityUser;
 import com.example.demo.commons.entity.SysDictData;
 import com.example.demo.commons.entity.SysDictType;
 import com.example.demo.utils.RedisUtil;
@@ -18,7 +19,9 @@ import com.example.demo.xo.vo.SysDictTypeVO;
 import com.example.demo.base.enums.EStatus;
 import com.example.demo.base.holder.RequestHolder;
 import com.example.demo.base.serviceImpl.SuperServiceImpl;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
@@ -81,31 +84,26 @@ public class SysDictTypeServiceImpl extends SuperServiceImpl<SysDictTypeMapper, 
 
     @Override
     public String addSysDictType(SysDictTypeVO sysDictTypeVO) {
-        HttpServletRequest request = RequestHolder.getRequest();
+        SecurityUser principal = (SecurityUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         // 判断添加的字典类型是否存在
         QueryWrapper<SysDictType> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq(SQLConf.DICT_TYPE, sysDictTypeVO.getDictType());
-        queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-        queryWrapper.last(SysConf.LIMIT_ONE);
+        queryWrapper.eq(SQLConf.DICT_TYPE, sysDictTypeVO.getDictType())
+                .eq(SQLConf.STATUS, EStatus.ENABLE);
         SysDictType temp = sysDictTypeService.getOne(queryWrapper);
         if (temp != null) {
             return ResultUtil.errorWithMessage(MessageConf.ENTITY_EXIST);
         }
         SysDictType sysDictType = new SysDictType();
-        sysDictType.setDictName(sysDictTypeVO.getDictName());
-        sysDictType.setDictType(sysDictTypeVO.getDictType());
-        sysDictType.setRemark(sysDictTypeVO.getRemark());
-        sysDictType.setIsPublish(sysDictTypeVO.getIsPublish());
-        sysDictType.setSort(sysDictTypeVO.getSort());
-        sysDictType.setCreateByUid(request.getAttribute(SysConf.ADMIN_UID).toString());
-        sysDictType.setUpdateByUid(request.getAttribute(SysConf.ADMIN_UID).toString());
+        BeanUtils.copyProperties(sysDictTypeVO,sysDictType);
+        sysDictType.setCreateByUid(principal.admin.getUid());
+        sysDictType.setUpdateByUid(principal.admin.getUid());
         sysDictType.insert();
         return ResultUtil.successWithMessage(MessageConf.INSERT_SUCCESS);
     }
 
     @Override
     public String editSysDictType(SysDictTypeVO sysDictTypeVO) {
-        HttpServletRequest request = RequestHolder.getRequest();
+        SecurityUser principal = (SecurityUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         SysDictType sysDictType = sysDictTypeService.getById(sysDictTypeVO.getUid());
 
         // 判断编辑的字典类型是否存在
@@ -125,7 +123,7 @@ public class SysDictTypeServiceImpl extends SuperServiceImpl<SysDictTypeMapper, 
         sysDictType.setRemark(sysDictTypeVO.getRemark());
         sysDictType.setIsPublish(sysDictTypeVO.getIsPublish());
         sysDictType.setSort(sysDictTypeVO.getSort());
-        sysDictType.setUpdateByUid(request.getAttribute(SysConf.ADMIN_UID).toString());
+        sysDictType.setUpdateByUid(principal.admin.getUid());
         sysDictType.setUpdateTime(new Date());
         sysDictType.updateById();
 

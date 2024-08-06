@@ -20,6 +20,7 @@ import com.example.demo.xo.mapper.CategoryMenuMapper;
 import com.example.demo.xo.service.CategoryMenuService;
 import com.example.demo.xo.service.RoleService;
 import com.example.demo.xo.vo.CategoryMenuVO;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -237,6 +238,58 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
                .collect(Collectors.toList());
 
     }
+
+    @Override
+    public Map<String, Object> getMenusByUser(List<String> roleName) {
+
+        List<String> categoryMenuUids=new ArrayList<>();
+        roleName.stream().forEach(role->{
+            Role role1 = roleService.getOne(new QueryWrapper<Role>().eq("role_name", role));
+            List<String> stringList = Arrays.stream(role1.getCategoryMenuUids()
+                    .replace("[", "")
+                    .replace("]", "")
+                    .replace("\"", "")
+                    .split(",")).collect(Collectors.toList());
+            categoryMenuUids.addAll(stringList);
+        });
+
+
+        Collection<CategoryMenu> categoryMenuList = categoryMenuService.listByIds(categoryMenuUids);
+
+        Set<String> secondMenuUidList = categoryMenuList.stream()
+                .filter(item -> item.getMenuLevel() == SysConf.TWO && item.getMenuType() == EMenuType.MENU)
+                .map(CategoryMenu::getUid)
+                .collect(Collectors.toSet());
+
+        List<CategoryMenu> buttonList = categoryMenuList.stream()
+                .filter(item -> item.getMenuType() == EMenuType.BUTTON && StringUtils.isNotEmpty(item.getParentUid()))
+                .peek(item -> secondMenuUidList.add(item.getParentUid()))
+                .collect(Collectors.toList());
+
+        Collection<CategoryMenu> childCategoryMenuList = categoryMenuService.listByIds(secondMenuUidList);
+
+        List<String> parentCategoryMenuUids = childCategoryMenuList.stream()
+                .filter(item -> item.getMenuLevel() == SysConf.TWO && StringUtils.isNotEmpty(item.getParentUid()))
+                .map(CategoryMenu::getParentUid)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Collection<CategoryMenu> parentCategoryMenuList = categoryMenuService.listByIds(parentCategoryMenuUids);
+
+        List<CategoryMenu> sortedParentList = new ArrayList<>(parentCategoryMenuList);
+        sortedParentList.sort(Comparator.comparing(CategoryMenu::getSort).reversed()); // 使用比较器进行排序
+
+        Map<String, Object> map = new HashMap<>();
+        map.put(SysConf.PARENT_LIST, sortedParentList);
+        map.put(SysConf.SON_LIST, childCategoryMenuList);
+        map.put(SysConf.BUTTON_LIST, buttonList);
+
+        return map;
+
+
+
+    }
+
     private List<CategoryMenu> buildCategoryMenus(List<CategoryMenu> categoryMenus) {
         // 构建一级菜单
         return categoryMenus.stream()
@@ -251,151 +304,125 @@ public class CategoryMenuServiceImpl extends SuperServiceImpl<CategoryMenuMapper
 
     @Override
     public List<CategoryMenu> getButtonAllList(String keyword) {
+        // 创建主查询条件
         QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq(SQLConf.MENU_LEVEL, "2");
-        queryWrapper.orderByDesc(SQLConf.SORT);
+        queryWrapper.eq(SQLConf.MENU_LEVEL, "2")
+                .orderByDesc(SQLConf.SORT)
+                .eq(SQLConf.STATUS, EStatus.ENABLE)
+                .eq(SQLConf.MENU_TYPE, EMenuType.MENU);
         if (StringUtils.isNotEmpty(keyword)) {
             queryWrapper.eq(SQLConf.UID, keyword);
         }
-        queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-        queryWrapper.eq(SQLConf.MENU_TYPE, EMenuType.MENU);
-        List<CategoryMenu> list = categoryMenuService.list(queryWrapper);
 
-        //获取所有的ID，去寻找他的子目录
-        List<String> ids = new ArrayList<>();
-        list.forEach(item -> {
-            if (StringUtils.isNotEmpty(item.getUid())) {
-                ids.add(item.getUid());
-            }
-        });
+        // 获取符合条件的二级菜单
+        List<CategoryMenu> firstLevelMenus = categoryMenuService.list(queryWrapper);
 
-        QueryWrapper<CategoryMenu> childWrapper = new QueryWrapper<>();
-        childWrapper.in(SQLConf.PARENT_UID, ids);
-        childWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-        Collection<CategoryMenu> childList = categoryMenuService.list(childWrapper);
-        Set<String> secondUidSet = new HashSet<>();
-        Map<String, List<CategoryMenu>> map = new HashMap<>();
-        childList.forEach(item -> {
-            if (StringUtils.isNotEmpty(item.getParentUid())) {
+        // 获取所有二级菜单的UID
+        List<String> firstLevelUids = firstLevelMenus.stream()
+                .map(CategoryMenu::getUid)
+                .filter(StringUtils::isNotEmpty)
+                .collect(Collectors.toList());
 
-                secondUidSet.add(item.getParentUid());
-
-                if (map.get(item.getParentUid()) == null) {
-                    List<CategoryMenu> tempList = new ArrayList<>();
-                    tempList.add(item);
-                    map.put(item.getParentUid(), tempList);
-                } else {
-                    List<CategoryMenu> tempList = map.get(item.getParentUid());
-                    tempList.add(item);
-                    map.put(item.getParentUid(), tempList);
-                }
-            }
-        });
-
-        // 过滤不在Button列表中的二级菜单
-        List<CategoryMenu> secondCategoryMenuList = new ArrayList<>();
-        for (CategoryMenu secondCategoryMenu : list) {
-            for (String uid : secondUidSet) {
-                if (secondCategoryMenu.getUid().equals(uid)) {
-                    secondCategoryMenuList.add(secondCategoryMenu);
-                    break;
-                }
-            }
+        if (firstLevelUids.isEmpty()) {
+            return firstLevelMenus; // 如果没有符合条件的二级菜单，直接返回
         }
 
-        // 给二级菜单设置三级按钮
-        secondCategoryMenuList.forEach(item -> {
-            if (map.get(item.getUid()) != null) {
-                List<CategoryMenu> tempList = map.get(item.getUid());
-                Collections.sort(tempList);
-                item.setChildCategoryMenu(tempList);
+        // 创建子菜单查询条件
+        QueryWrapper<CategoryMenu> childWrapper = new QueryWrapper<>();
+        childWrapper.in(SQLConf.PARENT_UID, firstLevelUids)
+                .eq(SQLConf.STATUS, EStatus.ENABLE);
+
+        // 获取子菜单
+        List<CategoryMenu> childMenus = categoryMenuService.list(childWrapper);
+
+        // 将子菜单按照父UID分组
+        Map<String, List<CategoryMenu>> childMap = childMenus.stream()
+                .filter(child -> StringUtils.isNotEmpty(child.getParentUid()))
+                .collect(Collectors.groupingBy(CategoryMenu::getParentUid));
+
+        // 过滤一级菜单，只保留存在子菜单的一级菜单
+        List<CategoryMenu> secondLevelMenus = firstLevelMenus.stream()
+                .filter(menu -> childMap.containsKey(menu.getUid()))
+                .collect(Collectors.toList());
+
+        // 设置子菜单并排序
+        secondLevelMenus.forEach(menu -> {
+            List<CategoryMenu> children = childMap.get(menu.getUid());
+            if (children != null) {
+                children.sort(Comparator.comparing(CategoryMenu::getSort));
+                menu.setChildCategoryMenu(children);
             }
         });
-        return list;
+
+        return secondLevelMenus;
     }
+
 
     @Override
     public String addCategoryMenu(CategoryMenuVO categoryMenuVO) {
         //如果是一级菜单，将父ID清空
         if (categoryMenuVO.getMenuLevel() == 1) {
-            categoryMenuVO.setParentUid("");
+            categoryMenuVO.setParentUid("0");
         }
         CategoryMenu categoryMenu = new CategoryMenu();
-        categoryMenu.setParentUid(categoryMenuVO.getParentUid());
-        categoryMenu.setSort(categoryMenuVO.getSort());
-        categoryMenu.setIcon(categoryMenuVO.getIcon());
-        categoryMenu.setSummary(categoryMenuVO.getSummary());
-        categoryMenu.setMenuLevel(categoryMenuVO.getMenuLevel());
-        categoryMenu.setMenuType(categoryMenuVO.getMenuType());
-        categoryMenu.setName(categoryMenuVO.getName());
-        categoryMenu.setUrl(categoryMenuVO.getUrl());
-        categoryMenu.setIsShow(categoryMenuVO.getIsShow());
-        categoryMenu.setUpdateTime(LocalDateTime.now());
-        categoryMenu.setIsJumpExternalUrl(categoryMenuVO.getIsJumpExternalUrl());
+        BeanUtils.copyProperties(categoryMenuVO,categoryMenu);
+        categoryMenu.setUpdateTime(new Date());
         categoryMenu.insert();
         return ResultUtil.successWithMessage(MessageConf.INSERT_SUCCESS);
     }
 
     @Override
     public String editCategoryMenu(CategoryMenuVO categoryMenuVO) {
-        CategoryMenu categoryMenu = categoryMenuService.getById(categoryMenuVO.getUid());
-        categoryMenu.setParentUid(categoryMenuVO.getParentUid());
-        categoryMenu.setSort(categoryMenuVO.getSort());
-        categoryMenu.setIcon(categoryMenuVO.getIcon());
-        categoryMenu.setSummary(categoryMenuVO.getSummary());
-        categoryMenu.setMenuLevel(categoryMenuVO.getMenuLevel());
-        categoryMenu.setMenuType(categoryMenuVO.getMenuType());
-        categoryMenu.setName(categoryMenuVO.getName());
-        categoryMenu.setUrl(categoryMenuVO.getUrl());
-        categoryMenu.setIsShow(categoryMenuVO.getIsShow());
-        categoryMenu.setUpdateTime(LocalDateTime.now());
-        categoryMenu.setIsJumpExternalUrl(categoryMenuVO.getIsJumpExternalUrl());
-        categoryMenu.updateById();
+        CategoryMenu categoryMenu = new CategoryMenu();
+        BeanUtils.copyProperties(categoryMenuVO,categoryMenu);
+        categoryMenu.setUpdateTime(new Date());
+        this.baseMapper.updateById(categoryMenu);
         // 修改成功后，需要删除redis中所有的admin访问路径
-        deleteAdminVisitUrl();
+//        deleteAdminVisitUrl();
         return ResultUtil.successWithMessage(MessageConf.UPDATE_SUCCESS);
     }
 
     @Override
     public String deleteCategoryMenu(CategoryMenuVO categoryMenuVO) {
-        QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-        queryWrapper.in(SQLConf.PARENT_UID, categoryMenuVO.getUid());
-        Integer menuCount = categoryMenuService.count(queryWrapper);
-        if (menuCount > 0) {
-            return ResultUtil.errorWithMessage(MessageConf.CHILDREN_MENU_UNDER_THIS_MENU);
-        }
-        CategoryMenu categoryMenu = categoryMenuService.getById(categoryMenuVO.getUid());
-        categoryMenu.setStatus(EStatus.DISABLED);
-        categoryMenu.setUpdateTime(LocalDateTime.now());
-        categoryMenu.updateById();
-        // 修改成功后，需要删除redis中所有的admin访问路径
-        deleteAdminVisitUrl();
+            this.baseMapper.deleteById(categoryMenuVO.getUid());
+        //TODO 修改菜单后管理员访问路径改变？
+//        deleteAdminVisitUrl();
         return ResultUtil.successWithMessage(MessageConf.DELETE_SUCCESS);
     }
 
     @Override
     public String stickCategoryMenu(CategoryMenuVO categoryMenuVO) {
-        CategoryMenu categoryMenu = categoryMenuService.getById(categoryMenuVO.getUid());
-        //查找出最大的那一个
+        // 构建查询条件
         QueryWrapper<CategoryMenu> queryWrapper = new QueryWrapper<>();
-        //如果是二级菜单 或者 按钮，就在当前的兄弟中，找出最大的一个
-        if (categoryMenu.getMenuLevel() == Constants.NUM_TWO || categoryMenu.getMenuType() == EMenuType.BUTTON) {
-            queryWrapper.eq(SQLConf.PARENT_UID, categoryMenu.getParentUid());
+        Integer menuLevel = categoryMenuVO.getMenuLevel();
+        Integer menuType = categoryMenuVO.getMenuType();
+
+        // 如果是二级菜单 或者 按钮，就在当前的兄弟中，找出最大的一个
+        if (menuLevel == Constants.NUM_TWO || menuType == EMenuType.BUTTON) {
+            queryWrapper.eq(SQLConf.PARENT_UID, categoryMenuVO.getParentUid());
         }
-        queryWrapper.eq(SQLConf.MENU_LEVEL, categoryMenu.getMenuLevel());
+        queryWrapper.eq(SQLConf.MENU_LEVEL, menuLevel);
         queryWrapper.orderByDesc(SQLConf.SORT);
-        queryWrapper.last(SysConf.LIMIT_ONE);
+
+        // 查找最大的排序值
         CategoryMenu maxSort = categoryMenuService.getOne(queryWrapper);
-        if (StringUtils.isEmpty(maxSort.getUid())) {
+
+        // 处理查找结果
+        if (maxSort == null || StringUtils.isEmpty(maxSort.getUid())) {
             return ResultUtil.errorWithMessage(MessageConf.OPERATION_FAIL);
         }
-        Integer sortCount = maxSort.getSort() + 1;
+
+        // 更新排序值
+        Integer sortCount = Optional.ofNullable(maxSort.getSort()).orElse(0) + 1;
+        CategoryMenu categoryMenu = new CategoryMenu();
+        BeanUtils.copyProperties(categoryMenuVO,categoryMenu);
         categoryMenu.setSort(sortCount);
-        categoryMenu.setUpdateTime(LocalDateTime.now());
-        categoryMenu.updateById();
+        categoryMenu.setUpdateTime(new Date());
+        categoryMenuService.updateById(categoryMenu);
+
         return ResultUtil.successWithMessage(MessageConf.OPERATION_SUCCESS);
     }
+
 
     /**
      * 删除Redis中管理员的访问路径

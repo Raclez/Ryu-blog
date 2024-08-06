@@ -78,4 +78,5 @@ public final class SysConf extends BaseSysConf {
     public static final String RECEIVER = "receiver";
     public static final String SUBJECT = "subject";
 
+    public static final String BUTTON_LIST = "buttonList";
 }

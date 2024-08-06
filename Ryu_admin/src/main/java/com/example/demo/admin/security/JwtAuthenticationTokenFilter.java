@@ -87,7 +87,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
         //请求头 'Authorization': tokenHead + token
         if (!StringUtils.isEmpty(authHeader) && authHeader.startsWith(tokenHead)) {
 
-            log.error("传递过来的token为: {}", authHeader);
+            log.info("传递过来的token为: {}", authHeader);
             // 私钥
             String base64Secret = audience.getBase64Secret();
 
@@ -108,7 +108,7 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
                     request.setAttribute(SysConf.USER_NAME, name);
                     request.setAttribute(SysConf.TOKEN, authHeader);
                     log.info("解析出来用户: {}", name);
-            log.info("解析出来的用户Uid: {}", userDetails.admin.getUid());
+                    log.info("解析出来的用户Uid: {}", userDetails.admin.getUid());
 
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities());

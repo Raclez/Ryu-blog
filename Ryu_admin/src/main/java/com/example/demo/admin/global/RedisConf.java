@@ -9,5 +9,6 @@ import com.example.demo.base.global.BaseRedisConf;
  * @create:
  */
 public class RedisConf extends BaseRedisConf {
+    public static final String ROLE_MENUS_HASH = "role:menus: ";
 
 }

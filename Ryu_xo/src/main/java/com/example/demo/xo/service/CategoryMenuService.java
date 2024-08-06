@@ -69,9 +69,11 @@ public interface CategoryMenuService extends SuperService<CategoryMenu> {
 
 
     /**
-     * 当前角色查询菜单
+     * 当前角色查询三级菜单
      * @param roleNames
      * @return
      */
     public List<CategoryMenu> getMenusByRole(List<String> roleNames);
+
+    Map<String, Object> getMenusByUser(List<String> roleName);
 }

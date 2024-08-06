@@ -16,7 +16,7 @@ pipeline {
       }
     }
 
-    stage('unit test') {
+    stage('Build') {
       steps {
         container('maven') {
           sh 'mvn clean package -Dmaven.test.skip=true'
@@ -24,6 +24,20 @@ pipeline {
 
       }
     }
+stage('SonarQube analysis') {
+            steps {
+                script {
+                    def scannerHome = tool 'SonarQube Scanner'
+                    withSonarQubeEnv('SonarQube Server') {
+                        sh "${scannerHome}/bin/sonar-scanner " +
+                           "-Dsonar.projectKey=${env.SONAR_PROJECT_KEY} " +
+                           "-Dsonar.sources=. " +
+                           "-Dsonar.host.url=${env.SONAR_HOST_URL} " +
+                           "-Dsonar.login=${env.SONAR_AUTH_TOKEN}"
+                    }
+                }
+            }
+        }
 
     stage('把jar包构建为docker镜像') {
       parallel {

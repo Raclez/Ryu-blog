@@ -66,7 +66,7 @@ public class LoginRestApi {
     @Autowired
     private WebUtil webUtil;
     @Autowired
-    private AdminService adminService;
+        private AdminService adminService;
     @Autowired
     private RoleService roleService;
     @Autowired
@@ -109,8 +109,6 @@ public class LoginRestApi {
         if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
             return ResultUtil.result(SysConf.ERROR, "账号或密码不能为空");
         }
-//        String ip = IpUtils.getIpAddr(request);
-//        String limitCount = redisUtil.get(RedisConf.LOGIN_LIMIT + RedisConf.SEGMENTATION + ip);
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, password)
@@ -147,16 +145,16 @@ public class LoginRestApi {
         }
         stringRedisTemplate.opsForValue().set("auth:token:" + token, admin.getUsername(), expiresSecond, TimeUnit.SECONDS);
         stringRedisTemplate.opsForValue().set("auth:username:"+admin.getUsername(),token,expiresSecond,TimeUnit.SECONDS);
+        Admin loginAdmin = admin.admin;
 
-
-//        //进行登录相关操作
-//        Integer count = admin.getLoginCount() + 1;
-//        admin.setLoginCount(count);
-//        admin.setLastLoginIp(IpUtils.getIpAddr(request));
-//        admin.setLastLoginTime(LocalDateTime.now());
-//        admin.updateById();
+        //进行登录相关操作
+        Integer count = loginAdmin.getLoginCount() + 1;
+        loginAdmin.setLoginCount(count);
+        loginAdmin.setLastLoginIp(IpUtils.getIpAddr(request));
+        loginAdmin.setLastLoginTime(new Date());
 //        // 设置token到validCode，用于记录登录用户
-//        admin.setValidCode(token);
+        loginAdmin.setValidCode(token);
+        adminService.updateById(loginAdmin);
 //        // 设置tokenUid，【主要用于换取token令牌，防止token直接暴露到在线用户管理中】
 //        admin.setTokenUid(StringUtils.getUUID());
 //        admin.setRole(roles.get(0));
@@ -171,10 +169,11 @@ public class LoginRestApi {
                        @ApiParam(name = "token", value = "token令牌", required = false) @RequestParam(name = "token", required = false) String token) {
 
         Map<String, Object> map = new HashMap<>(Constants.NUM_THREE);
-        if (request.getAttribute(SysConf.ADMIN_UID) == null) {
-            return ResultUtil.result(SysConf.ERROR, "token用户过期");
-        }
-        Admin admin = adminService.getById(request.getAttribute(SysConf.ADMIN_UID).toString());
+//        if (request.getAttribute(SysConf.ADMIN_UID) == null) {
+//            return ResultUtil.result(SysConf.ERROR, "token用户过期");
+//        }
+        SecurityUser principal = (SecurityUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Admin admin = adminService.getById(principal.admin.getUid());
         map.put(SysConf.TOKEN, token);
         //获取图片
         if (StringUtils.isNotEmpty(admin.getAvatar())) {
@@ -196,15 +195,20 @@ public class LoginRestApi {
 
     @ApiOperation(value = "获取当前用户的菜单", notes = "获取当前用户的菜单", response = String.class)
     @GetMapping(value = "/getMenu")
+
     public String getMenu(HttpServletRequest request) {
-          SecurityUser securityUser = (SecurityUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        SecurityUser securityUser = (SecurityUser) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         Collection<? extends GrantedAuthority> authorities = securityUser.getAuthorities();
         List<String> roleName = authorities.stream().map(authorit -> authorit.getAuthority()).collect(Collectors.toList());
-        List<CategoryMenu> menusByRole = categoryMenuService.getMenusByRole(roleName);
 
-        return ResultUtil.result(SysConf.SUCCESS, menusByRole);
+        Map<String, Object> map = categoryMenuService.getMenusByUser(roleName);
+
+        return ResultUtil.result(SysConf.SUCCESS, map);
     }
+
+
 
     @ApiOperation(value = "获取网站名称", notes = "获取网站名称", response = String.class)
     @GetMapping(value = "/getWebSiteName")

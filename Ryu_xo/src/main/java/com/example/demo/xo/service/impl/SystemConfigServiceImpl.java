@@ -55,24 +55,22 @@ public class SystemConfigServiceImpl extends SuperServiceImpl<SystemConfigMapper
         String systemConfigJson = redisUtil.get(RedisConf.SYSTEM_CONFIG);
         if(StringUtils.isEmpty(systemConfigJson)) {
             QueryWrapper<SystemConfig> queryWrapper = new QueryWrapper<>();
-            queryWrapper.orderByDesc(SQLConf.CREATE_TIME);
-            queryWrapper.eq(SQLConf.STATUS, EStatus.ENABLE);
-            queryWrapper.last(SysConf.LIMIT_ONE);
+            queryWrapper.orderByDesc(SQLConf.CREATE_TIME)
+                    .eq(SQLConf.STATUS, EStatus.ENABLE);
             SystemConfig systemConfig = systemConfigService.getOne(queryWrapper);
             if (systemConfig == null) {
                 throw new QueryException(MessageConf.SYSTEM_CONFIG_IS_NOT_EXIST);
-            } else {
+            }
                 // 将系统配置存入Redis中【设置过期时间24小时】
                 redisUtil.setEx(RedisConf.SYSTEM_CONFIG, JsonUtils.objectToJson(systemConfig), 24, TimeUnit.HOURS);
-            }
             return systemConfig;
-        } else {
+        }
             SystemConfig systemConfig = JsonUtils.jsonToPojo(systemConfigJson, SystemConfig.class);
             if(systemConfig == null) {
                 throw new QueryException(ErrorCode.QUERY_DEFAULT_ERROR, "系统配置转换错误，请检查系统配置，或者清空Redis后重试！");
             }
             return systemConfig;
-        }
+
     }
 
     @Override

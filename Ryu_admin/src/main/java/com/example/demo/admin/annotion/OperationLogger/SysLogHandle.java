@@ -133,7 +133,7 @@ public class SysLogHandle extends AbstractRequestAwareRunnable {
         sysLog.setUpdateTime(new Date());
 
         sysLog.setUserName(securityUser.getUsername());
-        sysLog.setAdminUid(securityUser.getUid());
+        sysLog.setAdminUid(securityUser.admin.getUid());
         sysLog.setParams(paramsJson);
         Date endTime = new Date();
         Long spendTime = DateUtil.between(startTime, endTime, DateUnit.MS);
