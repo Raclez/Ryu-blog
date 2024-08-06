@@ -322,6 +322,7 @@ stage('SonarQube analysis') {
     GITHUB_ACCOUNT = 'kubesphere'
     APP_NAME = 'devops-java-sample'
   }
+
   parameters {
     string(name: 'TAG_NAME', defaultValue: '1', description: '')
   }
